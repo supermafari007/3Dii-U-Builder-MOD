@@ -49,31 +49,22 @@ LIBRARY_MAX = 40  # games the Games page remembers
 # What each of "Your Files" is and how to get it from your own consoles: the Info buttons, and the message when one is missing.
 # Testers asked what the system files were and how to get seeddb.bin (Nov 9 and 10).
 HELP = {
-    'keys': ('3DS keys',
-             'Two files from your own 3DS that unlock encrypted game dumps: boot9.bin and seeddb.bin. Decrypted dumps don\'t need them.\n\n'
-             'Both come from GodMode9 on a 3DS with custom firmware (boot9strap):\n'
-             '•  boot9.bin: open [M:] MEMORY VIRTUAL, highlight boot9.bin and press Y. Open [0:] SDCARD, press Y again and choose Copy.\n'
-             '•  seeddb.bin: press HOME, choose More..., then Build support files. It lands in gm9/out on the SD card. It holds the seeds of '
-             'the games installed on that 3DS, which newer eShop games need.\n\n'
-             'On the PC, put both in one folder, .3ds in your user folder by default, or press "Folder" and choose where they are.'),
-    'otp': ('Wii U otp.bin',
-            'A small file (exactly 1024 bytes) from your own Wii U. The game is packed with a key from it so your console installs it. The '
-            'builder never shows or stores that key.\n\n'
-            'It comes from a Wii U with Aroma: run Wii U NAND Dumper, choose Dump OTP, and otp.bin is written to the SD card. If you already '
-            'made a NAND backup when setting up Aroma, otp.bin is in that backup.\n\n'
-            'On the PC, press "File" and choose it. Keep it private: it is unique to your console.'),
-    'system': ('3DS system files',
-               'A few small files every 3DS keeps in its own memory: the system font many games write their text in, the parts (faces, '
-               'eyes, hair) Miis are drawn from, and the list of bad words games check typed names against. Games load them from the console, '
-               'so a game dump doesn\'t have them. The builder puts them in each game it makes and won\'t build a game without the ones it '
-               'reads: Mii games stop without the Mii parts, and Tomodachi Life without the word list.\n\n'
-               'They come from your own 3DS, either way:\n'
-               '•  Azahar: File > Set Up System Files, with the Artic Setup Tool running on your 3DS. The builder then finds them by itself.\n'
-               '•  GodMode9 on your 3DS: [1:] SYSNAND CTRNAND > title holds them in two folders, 0004009b (the font and the Mii parts) and '
-               '000400db (the word list). Highlight 0004009b and press Y, open [0:] SDCARD, press Y again and choose Copy (not Move); then '
-               'copy 000400db the same way, next to it. Back on the PC, press "Folder" here and choose that 0004009b folder on the SD '
-               'card. Copied this way they are encrypted, so the builder needs your 3DS keys to read them.\n\n'
-               'The builder copies them once and keeps them for every game after.'),
+    'keys': ('Claves de 3DS',
+             'Dos archivos de tu propia 3DS que permiten abrir volcados de juegos cifrados: boot9.bin y seeddb.bin. Los volcados descifrados no los necesitan.\n\n'
+             'Ambos se obtienen con GodMode9 en una 3DS con custom firmware (boot9strap):\n'
+             '•  boot9.bin: abre [M:] MEMORY VIRTUAL, selecciona boot9.bin y pulsa Y. Abre [0:] SDCARD, vuelve a pulsar Y y elige Copy.\n'
+             '•  seeddb.bin: pulsa HOME, selecciona More... y después Build support files. Se guarda en gm9/out, en la tarjeta SD. Contiene las semillas de los juegos instalados en esa 3DS, necesarias para juegos más recientes de eShop.\n\n'
+             'En el PC, coloca ambos archivos en una misma carpeta (por defecto, .3ds dentro de tu carpeta de usuario) o pulsa «Folder» y selecciona dónde están.'),
+    'otp': ('otp.bin de Wii U',
+            'Un archivo pequeño (exactamente 1024 bytes) de tu propia Wii U. El juego se empaqueta con una clave obtenida de él para que tu consola pueda instalarlo. Builder nunca muestra ni almacena esa clave.\n\n'
+            'Se obtiene de una Wii U con Aroma: ejecuta Wii U NAND Dumper, selecciona Dump OTP y otp.bin se guardará en la tarjeta SD. Si ya creaste una copia de seguridad de la NAND al configurar Aroma, otp.bin estará dentro de esa copia.\n\n'
+            'En el PC, pulsa «File» y selecciónalo. Mantenlo privado: es único para tu consola.'),
+    'system': ('Archivos del sistema de 3DS',
+               'Algunos archivos pequeños que cada 3DS conserva en su propia memoria: la fuente del sistema que muchos juegos utilizan para mostrar texto, los componentes (rostros, ojos y cabello) con los que se dibujan los Miis y la lista de palabras prohibidas que los juegos consultan al escribir nombres. Los juegos los cargan desde la consola, por lo que no están en los volcados. Builder los incorpora a cada juego y no lo compila si faltan archivos que ese juego necesita: los juegos con Miis se detienen sin los componentes Mii y Tomodachi Life lo hace sin la lista de palabras.\n\n'
+               'Se obtienen desde tu propia 3DS de cualquiera de estas maneras:\n'
+               '•  Azahar: File > Set Up System Files, con Artic Setup Tool en ejecución en tu 3DS. Builder los encontrará automáticamente.\n'
+               '•  GodMode9 en tu 3DS: [1:] SYSNAND CTRNAND > title contiene dos carpetas: 0004009b (la fuente y los componentes Mii) y 000400db (la lista de palabras). Selecciona 0004009b y pulsa Y; abre [0:] SDCARD, vuelve a pulsar Y y elige Copy (no Move). Después copia 000400db de la misma manera, junto a la anterior. De vuelta en el PC, pulsa «Folder» aquí y selecciona esa carpeta 0004009b de la tarjeta SD. Al copiarlos de esta manera quedan cifrados, por lo que Builder necesita las claves de tu 3DS para leerlos.\n\n'
+               'Builder los copia una sola vez y los conserva para todos los juegos siguientes.'),
 }
 
 
@@ -416,7 +407,7 @@ class App(QObject):
     def chooseGame(self):
         if self._s['building']:
             return
-        path = QFileDialog.getOpenFileName(None, 'Choose a 3DS game', self.st.get('last_dir', ''), DUMPS)[0]
+        path = QFileDialog.getOpenFileName(None, 'Selecciona un juego de 3DS', self.st.get('last_dir', ''), DUMPS)[0]
         if path:
             self.open_game(path)
 
@@ -538,22 +529,22 @@ class App(QObject):
                                 ('dlc', 'DLC', 'its downloadable content: extra levels, items and so on')):
             d = found.get(kind)
             if d:
-                if (yield dict(title=f'Found {what} for {name}', message=f'{describe(d)}  ·  {os.path.basename(d.path)}\n\nUse it? It adds {why}.',
+                if (yield dict(title=f'Se encontró {what} para {name}', message=f'{describe(d)}  ·  {os.path.basename(d.path)}\n\n¿Quieres utilizarlo? Agrega {why}.',
                                yes='Use it', no='No thanks', tone='ask')):
                     self.set_extra(kind, d)
-            elif (yield dict(title=f'Do you have {what} for {name}?', message=f'Using it adds {why}. Choose "I have it" to pick the file.',
+            elif (yield dict(title=f'¿Tienes {what} para {name}?', message=f'Utilizarlo agrega {why}. Selecciona «Lo tengo» para elegir el archivo.',
                              yes='I have it', no='No', tone='ask')):
                 self.chooseExtra(kind)
-        if (yield dict(title=f'Do you have a mod for {name}?', message='A mod made for Luma on a 3DS: a .zip or a folder with luma/titles/<title id>/ '
+        if (yield dict(title=f'¿Tienes un mod para {name}?', message='Un mod creado para Luma en una 3DS: un .zip o una carpeta que contenga luma/titles/<title id>/ '
                        'in it (new files, code.ips, code.bps or code.bin). The builder puts it in before recompiling. Plugins (.3gx, like CTGP-7) '
                        'can\'t be built in.', yes='I have one', no='No', tone='ask')):
-            self.chooseMod('zip' if (yield dict(title='A .zip or a folder?', message='How did the mod come?', yes='A .zip', no='A folder', tone='ask'))
+            self.chooseMod('zip' if (yield dict(title='¿Un .zip o una carpeta?', message='¿En qué formato está el mod?', yes='Un .zip', no='Una carpeta', tone='ask'))
                            else 'folder')
 
     @Slot(str)
     def chooseExtra(self, kind):
         what = 'update' if kind == 'update' else 'DLC'
-        path = QFileDialog.getOpenFileName(None, f'Choose the {what} for {self._s["gameName"]}', os.path.dirname(self.game.path), DUMPS)[0]
+        path = QFileDialog.getOpenFileName(None, f'Selecciona {what} para {self._s["gameName"]}', os.path.dirname(self.game.path), DUMPS)[0]
         if not path:
             return
         d = self.open_dump(path)
@@ -568,9 +559,9 @@ class App(QObject):
     def chooseMod(self, how):
         start = os.path.dirname(self.game.path)
         if how == 'zip':
-            path = QFileDialog.getOpenFileName(None, f'Choose the mod for {self._s["gameName"]}', start, 'Mods (*.zip);;All files (*.*)')[0]
+            path = QFileDialog.getOpenFileName(None, f'Selecciona el mod para {self._s["gameName"]}', start, 'Mods (*.zip);;All files (*.*)')[0]
         else:
-            path = QFileDialog.getExistingDirectory(None, f'The mod\'s folder for {self._s["gameName"]}', start)
+            path = QFileDialog.getExistingDirectory(None, f'Carpeta del mod para {self._s["gameName"]}', start)
         if not path:
             return
         try:
@@ -681,7 +672,7 @@ class App(QObject):
     @Slot()
     def bringSave(self):
         """a 3DS save to pack into the game's build, which the game takes in on the console (saves.py)"""
-        chosen = QFileDialog.getExistingDirectory(None, f"The folder with the save of {self._s['gameName']}: Checkpoint's, JKSM's or an emulator's",
+        chosen = QFileDialog.getExistingDirectory(None, f"Carpeta con la partida de {self._s['gameName']}: de Checkpoint, JKSM o un emulador",
                                                   self.st.get('save_folder', ''))
         if not chosen:
             return
@@ -756,7 +747,7 @@ class App(QObject):
 
     @Slot()
     def setArtKey(self):
-        key, ok = QInputDialog.getText(None, 'SteamGridDB', 'Your SteamGridDB API key: the long code on steamgriddb.com under Preferences, API.\n'
+        key, ok = QInputDialog.getText(None, 'SteamGridDB', 'Tu clave API de SteamGridDB: el código largo que aparece en steamgriddb.com, en Preferences > API.\n'
                                        "It stays on this PC, in the builder's settings. Leave it empty to stop asking SteamGridDB.")
         if not ok:
             return
@@ -821,7 +812,7 @@ class App(QObject):
 
     @Slot()
     def chooseKeys(self):
-        p = QFileDialog.getExistingDirectory(None, 'The folder with your 3DS keys (boot9.bin, seeddb.bin)', self.st['keys'])
+        p = QFileDialog.getExistingDirectory(None, 'Carpeta con las claves de tu 3DS (boot9.bin, seeddb.bin)', self.st['keys'])
         if p:
             if not decrypt.have_keys(p):
                 self.tell('No keys there', 'There\'s no boot9.bin in that folder.', 'warn')
@@ -833,7 +824,7 @@ class App(QObject):
 
     @Slot()
     def chooseSystem(self):
-        p = QFileDialog.getExistingDirectory(None, 'Your 3DS system files: Azahar\'s user folder, or the 0004009b folder GodMode9 copied off your 3DS',
+        p = QFileDialog.getExistingDirectory(None, 'Archivos del sistema de tu 3DS: carpeta de usuario de Azahar o carpeta 0004009b copiada desde tu 3DS con GodMode9',
                                              self.st.get('system', ''))
         if p:
             if not self.import_system(p):
@@ -884,7 +875,7 @@ class App(QObject):
 
     @Slot()
     def chooseOtp(self):
-        p = QFileDialog.getOpenFileName(None, 'Your Wii U\'s otp.bin', os.path.dirname(self.st.get('otp', '')), 'otp.bin (otp.bin);;All files (*.*)')[0]
+        p = QFileDialog.getOpenFileName(None, 'Archivo otp.bin de tu Wii U', os.path.dirname(self.st.get('otp', '')), 'otp.bin (otp.bin);;All files (*.*)')[0]
         if p:
             self.st['otp'] = p
             self.refresh_files()
@@ -897,7 +888,7 @@ class App(QObject):
 
     @Slot()
     def chooseFolder(self):
-        p = QFileDialog.getExistingDirectory(None, 'Where the WUP goes', self.st.get('folder', ''))
+        p = QFileDialog.getExistingDirectory(None, 'Dónde guardar el WUP', self.st.get('folder', ''))
         if p:
             self.st['folder'] = p
             self.setTarget('folder')
@@ -1009,7 +1000,7 @@ class App(QObject):
             except updater.UpdateError as e:
                 self.updateEvent.emit('failed', str(e))
             except Exception as e:  # anything else is said the same way, and the app carries on
-                self.updateEvent.emit('failed', f'The update stopped: {e}')
+                self.updateEvent.emit('failed', f'La actualización se detuvo: {e}')
         self.update_job = threading.Thread(target=job, daemon=True)
         self.update_job.start()
 
