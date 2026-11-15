@@ -47,7 +47,7 @@ ApplicationWindow {
         spacing: 6
         Button { id: pick; Layout.preferredWidth: 150; enabled: !win.busy; onClicked: parent.choose() }
         TextField { id: path; readOnly: true; Layout.fillWidth: true; selectByMouse: true }
-        Button { text: "Remove"; visible: parent.removable; enabled: !win.busy; onClicked: parent.remove() }
+        Button { text: "Quitar"; visible: parent.removable; enabled: !win.busy; onClicked: parent.remove() }
     }
     component Preview: ColumnLayout {
         property alias caption: cap.text
@@ -71,11 +71,11 @@ ApplicationWindow {
 
         RowLayout {
             Layout.fillWidth: true
-            Label { text: "Put the game on:" }
-            RadioButton { text: "an SD card"; checked: app.target === "card"; enabled: !win.busy; onClicked: app.setTarget("card") }
-            RadioButton { text: "a folder"; checked: app.target === "folder"; enabled: !win.busy; onClicked: app.setTarget("folder") }
+            Label { text: "Guardar el juego en:" }
+            RadioButton { text: "una tarjeta SD"; checked: app.target === "card"; enabled: !win.busy; onClicked: app.setTarget("card") }
+            RadioButton { text: "una carpeta"; checked: app.target === "folder"; enabled: !win.busy; onClicked: app.setTarget("folder") }
             Item { Layout.fillWidth: true }
-            Button { text: "Modern window"; enabled: !win.busy; onClicked: app.setLayout("modern") }
+            Button { text: "Ventana moderna"; enabled: !win.busy; onClicked: app.setLayout("modern") }
         }
 
         // a newer Builder, from its offer to its being ready (gui.py's updater part)
@@ -87,17 +87,17 @@ ApplicationWindow {
                 Label {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
-                    text: app.updateState === "available" ? "A newer Builder is out: " + app.updateTitle
-                        : app.updateState === "downloading" ? "Downloading the newer Builder... " + app.updateProgress + "%"
-                        : app.updateState === "unpacking" ? "Unpacking the newer Builder..."
-                        : app.updateState === "ready" ? "The newer Builder is ready. It opens the next time you start the Builder."
-                        : "The update stopped: " + app.updateMessage
+                    text: app.updateState === "available" ? "Hay una nueva versión de Builder: " + app.updateTitle
+                        : app.updateState === "downloading" ? "Descargando la nueva versión de Builder... " + app.updateProgress + "%"
+                        : app.updateState === "unpacking" ? "Descomprimiendo la nueva versión de Builder..."
+                        : app.updateState === "ready" ? "La nueva versión de Builder está lista. Se abrirá la próxima vez que inicies Builder."
+                        : "La actualización se detuvo: " + app.updateMessage
                 }
-                Button { text: "Update"; visible: app.updateState === "available"; onClicked: app.startUpdate() }
-                Button { text: "Try again"; visible: app.updateState === "failed"; onClicked: app.startUpdate() }
-                Button { text: "Restart now"; visible: app.updateState === "ready"; enabled: !app.building; onClicked: app.restartForUpdate() }
-                Button { text: "Cancel"; visible: app.updateState === "downloading"; onClicked: app.cancelUpdate() }
-                Button { text: "Later"; visible: app.updateState !== "downloading"; onClicked: app.laterUpdate() }
+                Button { text: "Actualizar"; visible: app.updateState === "available"; onClicked: app.startUpdate() }
+                Button { text: "Volver a intentar"; visible: app.updateState === "failed"; onClicked: app.startUpdate() }
+                Button { text: "Reiniciar ahora"; visible: app.updateState === "ready"; enabled: !app.building; onClicked: app.restartForUpdate() }
+                Button { text: "Cancelar"; visible: app.updateState === "downloading"; onClicked: app.cancelUpdate() }
+                Button { text: "Más tarde"; visible: app.updateState !== "downloading"; onClicked: app.laterUpdate() }
             }
         }
 
@@ -105,10 +105,10 @@ ApplicationWindow {
             id: tabs
             objectName: "tabs"
             Layout.fillWidth: true
-            TabButton { text: "Required Files" }
-            TabButton { text: "Optional Files" }
-            TabButton { text: "Art and Sound" }
-            TabButton { text: "Build" }
+            TabButton { text: "Archivos obligatorios" }
+            TabButton { text: "Archivos opcionales" }
+            TabButton { text: "Imagen y sonido" }
+            TabButton { text: "Compilar" }
         }
 
         StackLayout {
@@ -118,25 +118,25 @@ ApplicationWindow {
 
             ColumnLayout {  // what every build needs
                 spacing: 8
-                PathRow { label: "Game..."; text: app.hasGame ? app.gameName + "   " + app.meta : "Choose one of your 3DS games"; onChoose: app.chooseGame() }
-                PathRow { label: "Wii U otp.bin..."; text: app.otpText; onChoose: app.chooseOtp() }
-                PathRow { label: "3DS keys..."; text: app.keysText; onChoose: app.chooseKeys() }
-                PathRow { label: "3DS system files..."; text: app.sysText; onChoose: app.chooseSystem() }
+                PathRow { label: "Juego..."; text: app.hasGame ? app.gameName + "   " + app.meta : "Selecciona uno de tus juegos de 3DS"; onChoose: app.chooseGame() }
+                PathRow { label: "otp.bin de Wii U..."; text: app.otpText; onChoose: app.chooseOtp() }
+                PathRow { label: "Claves de 3DS..."; text: app.keysText; onChoose: app.chooseKeys() }
+                PathRow { label: "Archivos del sistema de 3DS..."; text: app.sysText; onChoose: app.chooseSystem() }
                 GridLayout {
                     columns: 2
                     columnSpacing: 12
-                    Label { text: "Game:" }
-                    Label { text: app.gameName || "None chosen"; font.bold: true }
-                    Label { text: "Made by:" }
+                    Label { text: "Juego:" }
+                    Label { text: app.gameName || "Ninguno seleccionado"; font.bold: true }
+                    Label { text: "Desarrollador:" }
                     Label { text: app.maker || "-" }
-                    Label { text: "On the Wii U:" }
+                    Label { text: "En Wii U:" }
                     Label { text: app.hasGame ? app.badge : "-" }
                 }
                 Label { text: app.note; wrapMode: Text.WordWrap; Layout.fillWidth: true; opacity: 0.85 }
                 RowLayout {
                     spacing: 16
-                    Preview { caption: "Wii U Menu icon"; source: app.iconArtUrl || app.artUrl || app.icon }
-                    Preview { caption: "Start-up screen art"; source: app.artUrl; boxWidth: 228 }
+                    Preview { caption: "Icono del menú de Wii U"; source: app.iconArtUrl || app.artUrl || app.icon }
+                    Preview { caption: "Imagen de inicio"; source: app.artUrl; boxWidth: 228 }
                 }
                 Item { Layout.fillHeight: true }
             }
@@ -144,7 +144,7 @@ ApplicationWindow {
             ColumnLayout {  // what a build can take along
                 spacing: 8
                 PathRow {
-                    label: "Update..."; text: app.updateText; removable: app.hasUpdate
+                    label: "Actualización..."; text: app.updateText; removable: app.hasUpdate
                     onChoose: app.hasGame ? app.chooseExtra("update") : app.chooseGame()
                     onRemove: app.removeExtra("update")
                 }
@@ -154,7 +154,7 @@ ApplicationWindow {
                     onRemove: app.removeExtra("dlc")
                 }
                 PathRow {
-                    label: "3DS save..."; text: app.saveText; removable: app.hasSave
+                    label: "Partida de 3DS..."; text: app.saveText; removable: app.hasSave
                     onChoose: app.hasGame ? app.bringSave() : app.chooseGame()
                     onRemove: app.removeSave()
                 }
@@ -162,15 +162,15 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     spacing: 6
                     Button { text: "Mod (.zip)..."; Layout.preferredWidth: 150; enabled: !win.busy; onClicked: app.hasGame ? app.chooseMod("zip") : app.chooseGame() }
-                    Button { text: "Mod (folder)..."; enabled: !win.busy; onClicked: app.hasGame ? app.chooseMod("folder") : app.chooseGame() }
+                    Button { text: "Mod (carpeta)..."; enabled: !win.busy; onClicked: app.hasGame ? app.chooseMod("folder") : app.chooseGame() }
                     TextField { readOnly: true; Layout.fillWidth: true; text: app.modText }
-                    Button { text: "Remove"; visible: app.hasMod; enabled: !win.busy; onClicked: app.removeExtra("mod") }
+                    Button { text: "Quitar"; visible: app.hasMod; enabled: !win.busy; onClicked: app.removeExtra("mod") }
                 }
                 Label {
                     Layout.fillWidth: true
                     wrapMode: Text.WordWrap
                     opacity: 0.85
-                    text: "A mod is one made for Luma on a 3DS: a .zip or a folder with luma/titles/<title id>/ in it. Plugins (.3gx) can't be built in."
+                    text: "Un mod creado para Luma en una 3DS: un .zip o una carpeta que contenga luma/titles/<title id>/. Los plugins (.3gx) no se pueden incorporar."
                 }
                 Item { Layout.fillHeight: true }
             }
@@ -178,49 +178,49 @@ ApplicationWindow {
             ColumnLayout {  // what the Wii U shows and plays while a game starts, and the GamePad's bezel while it plays
                 spacing: 8
                 PathRow {
-                    label: "Start-up art..."; text: app.artText; removable: app.hasArt
+                    label: "Imagen de inicio..."; text: app.artText; removable: app.hasArt
                     onChoose: app.hasGame ? app.chooseArt() : app.chooseGame()
                     onRemove: app.removeArt()
                 }
                 PathRow {
-                    label: "Wii U Menu icon..."; text: app.iconText; removable: app.hasIconArt
+                    label: "Icono del menú de Wii U..."; text: app.iconText; removable: app.hasIconArt
                     onChoose: app.hasGame ? app.chooseIcon() : app.chooseGame()
                     onRemove: app.removeIcon()
                 }
                 PathRow {
-                    label: "GamePad art..."; text: app.padArtText; removable: app.hasPadArt
+                    label: "Imagen del GamePad..."; text: app.padArtText; removable: app.hasPadArt
                     onChoose: app.hasGame ? app.choosePadArt() : app.chooseGame()
                     onRemove: app.removePadArt()
                 }
                 PathRow {
-                    label: "Game's sound..."; text: app.gameSoundText; removable: app.hasGameSound
+                    label: "Sonido del juego..."; text: app.gameSoundText; removable: app.hasGameSound
                     onChoose: app.hasGame ? app.chooseGameSound() : app.chooseGame()
                     onRemove: app.removeGameSound()
                 }
                 PathRow {
-                    label: "GamePad bezel..."; text: app.bezelText; removable: app.hasBezel
+                    label: "Marco del GamePad..."; text: app.bezelText; removable: app.hasBezel
                     onChoose: app.hasGame ? app.chooseBezel() : app.chooseGame()
                     onRemove: app.removeBezel()
                 }
                 RowLayout {
-                    Label { text: "Start-up screens:" }
-                    RadioButton { text: "Art on its own"; checked: app.artStyle === "picture"; onClicked: app.setArtStyle("picture") }
-                    RadioButton { text: "Virtual Console"; checked: app.artStyle === "console"; onClicked: app.setArtStyle("console") }
+                    Label { text: "Pantallas de inicio:" }
+                    RadioButton { text: "Solo la imagen"; checked: app.artStyle === "picture"; onClicked: app.setArtStyle("picture") }
+                    RadioButton { text: "Consola Virtual"; checked: app.artStyle === "console"; onClicked: app.setArtStyle("console") }
                 }
                 RowLayout {
                     spacing: 6
-                    Button { text: app.artKeySet ? "Change SteamGridDB key..." : "SteamGridDB key..."; Layout.preferredWidth: 220; onClicked: app.setArtKey() }
+                    Button { text: app.artKeySet ? "Cambiar clave de SteamGridDB..." : "Clave de SteamGridDB..."; Layout.preferredWidth: 220; onClicked: app.setArtKey() }
                     Label {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        text: app.artKeySet ? "Banners and icons from SteamGridDB, GameTDB's covers where it has nothing." : "Covers from GameTDB. A free SteamGridDB key gives banners and icons."
+                        text: app.artKeySet ? "Banners e iconos de SteamGridDB; portadas de GameTDB donde no haya resultados." : "Portadas de GameTDB. Una clave gratuita de SteamGridDB permite obtener banners e iconos."
                     }
                 }
                 RowLayout {
                     spacing: 6
-                    Button { text: "Start-up sound..."; Layout.preferredWidth: 220; onClicked: app.chooseSound() }
-                    Label { Layout.fillWidth: true; text: app.soundSet ? "Your sound plays while a game starts." : "None: games start silently." }
-                    Button { text: "Remove"; visible: app.soundSet; onClicked: app.removeSound() }
+                    Button { text: "Sonido de inicio..."; Layout.preferredWidth: 220; onClicked: app.chooseSound() }
+                    Label { Layout.fillWidth: true; text: app.soundSet ? "Tu sonido se reproduce al iniciar un juego." : "Ninguno: los juegos se inician sin sonido." }
+                    Button { text: "Quitar"; visible: app.soundSet; onClicked: app.removeSound() }
                 }
                 Item { Layout.fillHeight: true }
             }
@@ -247,13 +247,13 @@ ApplicationWindow {
                 RowLayout {
                     spacing: 6
                     Button {
-                        text: "Build"
+                        text: "Compilar"
                         font.bold: true
                         Layout.preferredWidth: 150
                         enabled: app.view === "form" && !win.busy
                         onClicked: app.hasGame ? app.build() : app.chooseGame()
                     }
-                    Button { text: "Cancel"; visible: app.view === "building"; enabled: app.building; onClicked: app.cancel() }
+                    Button { text: "Cancelar"; visible: app.view === "building"; enabled: app.building; onClicked: app.cancel() }
                     Button { text: "Back"; visible: app.view === "failed" || app.view === "done"; onClicked: app.back() }
                     Button { text: "Open the folder"; visible: app.view === "done" && app.target === "folder"; onClicked: app.openFolder() }
                     Label {
