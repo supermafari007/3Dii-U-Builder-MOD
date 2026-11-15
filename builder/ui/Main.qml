@@ -465,7 +465,7 @@ ApplicationWindow {
                 Rectangle { anchors.centerIn: parent; width: 60; height: 12; radius: 3; color: pal.keycapGlyph }
                 Rectangle { anchors.centerIn: parent; width: 12; height: 60; radius: 3; color: pal.keycapGlyph }
             }
-            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 136; text: "Build"; color: pal.railText; font.pixelSize: 30 }
+            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 136; text: "Compilar"; color: pal.railText; font.pixelSize: 30 }
             Hit { anchors.margins: 10; name: "Build page"; role: Accessible.PageTab; checked: win.page === "build"; onActivated: win.page = "build" }
         }
         Item {
@@ -474,7 +474,7 @@ ApplicationWindow {
                 model: 4
                 KeyCap { x: 42 + (index % 2) * 53; y: 22 + Math.floor(index / 2) * 53; width: 47; height: 52; inset: 5 }
             }
-            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 136; text: "Games"; color: pal.railText; font.pixelSize: 30 }
+            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 136; text: "Juegos"; color: pal.railText; font.pixelSize: 30 }
             Hit { anchors.margins: 10; name: "Games page"; role: Accessible.PageTab; checked: win.page === "games"; onActivated: win.page = "games" }
         }
         Item {
@@ -487,7 +487,7 @@ ApplicationWindow {
                     Label { anchors.centerIn: parent; text: "?"; color: pal.helpRing; font.pixelSize: 62; font.weight: Font.Bold }
                 }
             }
-            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 140; text: "Help"; color: pal.helpText; font.pixelSize: 30; font.weight: Font.DemiBold }
+            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 140; text: "Ayuda"; color: pal.helpText; font.pixelSize: 30; font.weight: Font.DemiBold }
             Hit { anchors.margins: 10; name: "Help page"; role: Accessible.PageTab; checked: win.page === "help"; onActivated: win.page = "help" }
         }
 
@@ -560,7 +560,7 @@ ApplicationWindow {
                 rim: 12
                 feather: 3
                 shadowOffset: 4
-                Hit { enabled: !win.busy; ringRadius: 75; name: app.hasGame ? "Change game: " + app.gameName : "Choose a game"; onActivated: app.chooseGame() }
+                Hit { enabled: !win.busy; ringRadius: 75; name: app.hasGame ? "Change game: " + app.gameName : "Elegir un juego"; onActivated: app.chooseGame() }
                 Item {
                     anchors.fill: parent
                     visible: !app.hasGame || buildPage.art === ""
@@ -587,8 +587,8 @@ ApplicationWindow {
                     spacing: 8
                     visible: app.hasGame && !app.building
                     enabled: !win.restarting
-                    Pill { text: "Change game"; onClicked: app.chooseGame() }
-                    Pill { id: artPill; text: "Art"; accessibleName: "Art and icon"; tip: app.artText; onClicked: artMenu.openAt(artPill) }
+                    Pill { text: "Cambiar juego"; onClicked: app.chooseGame() }
+                    Pill { id: artPill; text: "Arte"; accessibleName: "Art and icon"; tip: app.artText; onClicked: artMenu.openAt(artPill) }
                 }
                 ProgressPill {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -603,7 +603,7 @@ ApplicationWindow {
             Item {
                 x: 224; y: 470; width: 420; height: 156
                 visible: !app.hasGame
-                Label { id: choose; anchors.horizontalCenter: parent.horizontalCenter; y: 6; text: "Choose a game"; color: pal.title; font.pixelSize: 46; font.letterSpacing: 1.3 }
+                Label { id: choose; anchors.horizontalCenter: parent.horizontalCenter; y: 6; text: "Elegir un juego"; color: pal.title; font.pixelSize: 46; font.letterSpacing: 1.3 }
                 Item {
                     x: choose.x; y: choose.y + choose.baselineOffset + 4
                     width: choose.width; height: 22
@@ -615,7 +615,7 @@ ApplicationWindow {
                     }
                 }
                 Label { anchors.horizontalCenter: parent.horizontalCenter; y: 63; text: ".3ds    .cci    .cia    .cxi"; color: pal.sub; font.pixelSize: 21 }
-                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 102; text: "encrypted or decrypted"; color: pal.sub; font.pixelSize: 21 }
+                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 102; text: "cifrado o descifrado"; color: pal.sub; font.pixelSize: 21 }
                 Label { anchors.horizontalCenter: parent.horizontalCenter; y: 123; text: "ctrl + o"; color: pal.sub; font.pixelSize: 21 }
             }
             Column {
@@ -645,7 +645,7 @@ ApplicationWindow {
 
             Pill {
                 x: 224; y: 630; width: 418; height: 78
-                text: "Build It!"
+                text: "¡Compilar!"
                 fontSize: 44
                 letterSpacing: 1.5
                 ink: pal.buildText
@@ -671,7 +671,7 @@ ApplicationWindow {
                         id: updateCard
                         readonly property string st: app.updateState
                         visible: ["available", "downloading", "unpacking", "ready", "restarting", "failed"].indexOf(st) >= 0
-                        title: st === "failed" ? "The update stopped" : "A newer Builder is out"
+                        title: st === "failed" ? "La actualización se detuvo" : "Hay una nueva versión de Builder"
                         titleColor: st === "failed" ? pal.redText : pal.title
                         subtitle: app.updateTitle
                         Column {
@@ -698,11 +698,11 @@ ApplicationWindow {
                             Row {
                                 anchors.right: parent.right; anchors.rightMargin: 21; y: 10
                                 spacing: 8
-                                Pill { text: "Later"; accessibleName: "Update later"; visible: updateCard.st !== "downloading"; onClicked: app.laterUpdate() }
-                                Pill { text: "Cancel"; accessibleName: "Cancel the download"; tone: "red"; visible: updateCard.st === "downloading"; onClicked: app.cancelUpdate() }
-                                Pill { text: "Update"; accessibleName: "Download the update"; tone: "cyan"; visible: updateCard.st === "available"; onClicked: app.startUpdate() }
-                                Pill { text: "Restart now"; accessibleName: "Restart into the new version"; tone: "cyan"; visible: updateCard.st === "ready"; enabled: !app.building; onClicked: app.restartForUpdate() }
-                                Pill { text: "Try again"; accessibleName: "Try the update again"; tone: "cyan"; visible: updateCard.st === "failed"; onClicked: app.startUpdate() }
+                                Pill { text: "Más tarde"; accessibleName: "Actualizar más tarde"; visible: updateCard.st !== "downloading"; onClicked: app.laterUpdate() }
+                                Pill { text: "Cancelar"; accessibleName: "Cancelar la descarga"; tone: "red"; visible: updateCard.st === "downloading"; onClicked: app.cancelUpdate() }
+                                Pill { text: "Update"; accessibleName: "Descargar la actualización"; tone: "cyan"; visible: updateCard.st === "available"; onClicked: app.startUpdate() }
+                                Pill { text: "Reiniciar ahora"; accessibleName: "Restart into the new version"; tone: "cyan"; visible: updateCard.st === "ready"; enabled: !app.building; onClicked: app.restartForUpdate() }
+                                Pill { text: "Volver a intentar"; accessibleName: "Try the update again"; tone: "cyan"; visible: updateCard.st === "failed"; onClicked: app.startUpdate() }
                             }
                         }
                     }
@@ -710,48 +710,48 @@ ApplicationWindow {
                     Card {
                         visible: app.view === "form"
                         enabled: !win.restarting
-                        title: "Extras"
-                        subtitle: "Allows you to build with an update, DLC or a Mod.\nYou'll be asked about each when a game is picked."
+                        title: "Opciones adicionales"
+                        subtitle: "Permite compilar con una actualización, DLC o un mod.\nSe te preguntará por cada uno al seleccionar un juego."
                         CardRow {
-                            label: "Update"; sub: app.hasUpdate ? app.updateText : "None Selected."; light: app.hasUpdate ? "cyan" : "red"
-                            Pill { text: "Choose"; tone: "cyan"; onClicked: app.hasGame ? app.chooseExtra("update") : app.chooseGame() }
-                            Pill { text: "Remove"; tone: "red"; onClicked: app.removeExtra("update") }
+                            label: "Actualización"; sub: app.hasUpdate ? app.updateText : "Ninguno seleccionado."; light: app.hasUpdate ? "cyan" : "red"
+                            Pill { text: "Seleccionar"; tone: "cyan"; onClicked: app.hasGame ? app.chooseExtra("update") : app.chooseGame() }
+                            Pill { text: "Quitar"; tone: "red"; onClicked: app.removeExtra("update") }
                         }
                         CardRow {
-                            label: "DLC"; sub: app.hasDlc ? app.dlcText : "None Selected."; light: app.hasDlc ? "cyan" : "red"
-                            Pill { text: "Choose"; tone: "cyan"; onClicked: app.hasGame ? app.chooseExtra("dlc") : app.chooseGame() }
-                            Pill { text: "Remove"; tone: "red"; onClicked: app.removeExtra("dlc") }
+                            label: "DLC"; sub: app.hasDlc ? app.dlcText : "Ninguno seleccionado."; light: app.hasDlc ? "cyan" : "red"
+                            Pill { text: "Seleccionar"; tone: "cyan"; onClicked: app.hasGame ? app.chooseExtra("dlc") : app.chooseGame() }
+                            Pill { text: "Quitar"; tone: "red"; onClicked: app.removeExtra("dlc") }
                         }
                         CardRow {
-                            label: "Mod"; sub: app.hasMod ? app.modText : "None Selected."; light: app.hasMod ? "cyan" : "red"
+                            label: "Mod"; sub: app.hasMod ? app.modText : "Ninguno seleccionado."; light: app.hasMod ? "cyan" : "red"
                             Pill { text: ".zip"; onClicked: app.hasGame ? app.chooseMod("zip") : app.chooseGame() }
                             Pill { text: "Folder"; tone: "cyan"; onClicked: app.hasGame ? app.chooseMod("folder") : app.chooseGame() }
-                            Pill { text: "Remove"; tone: "red"; onClicked: app.removeExtra("mod") }
+                            Pill { text: "Quitar"; tone: "red"; onClicked: app.removeExtra("mod") }
                         }
                         CardRow {
-                            label: "3DS save"; sub: app.saveText; light: app.hasSave ? "cyan" : "grey"
-                            Pill { text: "Choose"; accessibleName: "Choose a 3DS save to pack in"; tone: "cyan"; onClicked: app.hasGame ? app.bringSave() : app.chooseGame() }
-                            Pill { text: "Remove"; accessibleName: "Remove the 3DS save"; tone: "red"; onClicked: app.removeSave() }
+                            label: "Partida de 3DS"; sub: app.saveText; light: app.hasSave ? "cyan" : "grey"
+                            Pill { text: "Seleccionar"; accessibleName: "Seleccionar una partida de 3DS para incluirla"; tone: "cyan"; onClicked: app.hasGame ? app.bringSave() : app.chooseGame() }
+                            Pill { text: "Quitar"; accessibleName: "Quitar la partida de 3DS"; tone: "red"; onClicked: app.removeSave() }
                         }
                     }
 
                     Card {
                         visible: app.view === "form"
                         enabled: !win.restarting
-                        title: "Your Files"
-                        subtitle: "These will be staying in your PC.\nThe Builder won't ever show or keep keys."
+                        title: "Tus archivos"
+                        subtitle: "Estos archivos permanecerán en tu PC.\nBuilder nunca mostrará ni conservará las claves."
                         CardRow {
-                            label: "3DS Keys"; sub: app.keysText; light: app.keysOk ? "cyan" : app.keysNeeded ? "red" : "grey"
+                            label: "Claves de 3DS"; sub: app.keysText; light: app.keysOk ? "cyan" : app.keysNeeded ? "red" : "grey"
                             Pill { text: "Info"; onClicked: app.explain("keys") }
                             Pill { text: "Folder"; tone: "cyan"; onClicked: app.chooseKeys() }
                         }
                         CardRow {
-                            label: "Wii U otp.bin"; sub: app.otpText; light: app.otpOk ? "cyan" : "red"
+                            label: "otp.bin de Wii U"; sub: app.otpText; light: app.otpOk ? "cyan" : "red"
                             Pill { text: "Info"; onClicked: app.explain("otp") }
                             Pill { text: "File"; tone: "cyan"; onClicked: app.chooseOtp() }
                         }
                         CardRow {
-                            label: "3DS System Files"; sub: app.sysText; light: app.sysOk ? "cyan" : "red"
+                            label: "Archivos del sistema de 3DS"; sub: app.sysText; light: app.sysOk ? "cyan" : "red"
                             Pill { text: "Info"; onClicked: app.explain("system") }
                             Pill { text: "Folder"; tone: "cyan"; onClicked: app.chooseSystem() }
                         }
@@ -760,17 +760,17 @@ ApplicationWindow {
                     Card {
                         visible: app.view === "form"
                         enabled: !win.restarting
-                        title: "Put it on"
-                        subtitle: "Where the finished game goes: straight onto\nyour Wii U's SD card, or into a folder on this PC."
+                        title: "Destino"
+                        subtitle: "Dónde guardar el juego terminado: directamente en\nla tarjeta SD de tu Wii U o en una carpeta de este PC."
                         CardRow {
-                            label: "SD card"; sub: app.target === "card" ? app.destText : "Tap to put it on an SD card."
+                            label: "Tarjeta SD"; sub: app.target === "card" ? app.destText : "Selecciona para guardarlo en una tarjeta SD."
                             light: app.target === "card" ? "cyan" : "grey"
                             tappable: true; role: Accessible.RadioButton; checked: app.target === "card"; onTapped: app.setTarget("card")
-                            Pill { text: "Look again"; onClicked: app.refreshCards() }
-                            Pill { id: cardsPill; text: "Choose"; accessibleName: "Choose an SD card"; tone: "cyan"; onClicked: cardMenu.openAt(cardsPill) }
+                            Pill { text: "Volver a buscar"; onClicked: app.refreshCards() }
+                            Pill { id: cardsPill; text: "Seleccionar"; accessibleName: "Seleccionar una tarjeta SD"; tone: "cyan"; onClicked: cardMenu.openAt(cardsPill) }
                         }
                         CardRow {
-                            label: "Folder"; sub: app.target === "folder" ? app.destText : "Tap to put it in a folder."
+                            label: "Carpeta"; sub: app.target === "folder" ? app.destText : "Selecciona para guardarlo en una carpeta."
                             light: app.target === "folder" ? "cyan" : "grey"
                             tappable: true; role: Accessible.RadioButton; checked: app.target === "folder"; onTapped: app.setTarget("folder")
                             Pill { text: "Folder"; tone: "cyan"; onClicked: app.chooseFolder() }
@@ -779,7 +779,7 @@ ApplicationWindow {
 
                     Card {
                         visible: app.view === "building" || app.view === "failed"
-                        title: app.view === "failed" ? "The build stopped" : "Building"
+                        title: app.view === "failed" ? "La compilación se detuvo" : "Building"
                         subtitle: app.view === "failed" ? app.resultText : app.gameName
                         titleColor: app.view === "failed" ? pal.redText : pal.title
                         Repeater {
@@ -798,9 +798,9 @@ ApplicationWindow {
                             Row {
                                 anchors.right: parent.right; anchors.rightMargin: 21; y: 8
                                 spacing: 8
-                                Pill { text: win.showLog ? "Hide details" : "Details"; onClicked: win.showLog = !win.showLog }
-                                Pill { text: "Cancel"; tone: "red"; visible: app.view === "building"; enabled: app.building; onClicked: app.cancel() }
-                                Pill { text: "Back"; tone: "cyan"; visible: app.view === "failed"; onClicked: app.back() }
+                                Pill { text: win.showLog ? "Ocultar detalles" : "Detalles"; onClicked: win.showLog = !win.showLog }
+                                Pill { text: "Cancelar"; tone: "red"; visible: app.view === "building"; enabled: app.building; onClicked: app.cancel() }
+                                Pill { text: "Volver"; tone: "cyan"; visible: app.view === "failed"; onClicked: app.back() }
                             }
                         }
                         LogPanel { visible: win.showLog }
@@ -808,15 +808,15 @@ ApplicationWindow {
 
                     Card {
                         visible: app.view === "done"
-                        title: "Ready to install!"
+                        title: "¡Listo para instalar!"
                         subtitle: app.resultText
                         Item {
                             width: 560; height: 58
                             Row {
                                 anchors.right: parent.right; anchors.rightMargin: 21; y: 8
                                 spacing: 8
-                                Pill { text: "Open folder"; tone: "cyan"; onClicked: app.openFolder() }
-                                Pill { text: "Build another"; onClicked: app.back() }
+                                Pill { text: "Abrir carpeta"; tone: "cyan"; onClicked: app.openFolder() }
+                                Pill { text: "Compilar otro"; onClicked: app.back() }
                             }
                         }
                     }
@@ -840,8 +840,8 @@ ApplicationWindow {
                 spacing: 34
                 Card {
                     width: 1030
-                    title: "Your games"
-                    subtitle: app.library.length ? "The games you picked before. Tap one to open it on the Build page." : "None yet: games you pick on the Build page come back here."
+                    title: "Tus juegos"
+                    subtitle: app.library.length ? "Los juegos que seleccionaste anteriormente. Selecciona uno para abrirlo en la página Compilar." : "Todavía no hay juegos: los que selecciones en Compilar aparecerán aquí."
                     Flow {
                         x: 24; width: 1030 - 48
                         spacing: 14
@@ -878,7 +878,7 @@ ApplicationWindow {
                                 Pill {
                                     id: forget
                                     x: 66; y: 0; width: 72; height: 30; fontSize: 15
-                                    text: "Remove"; accessibleName: "Remove " + modelData.name + " from your games"; tone: "red"
+                                    text: "Quitar"; accessibleName: "Quitar " + modelData.name + " de tus juegos"; tone: "red"
                                     opacity: libTile.showRemove ? 1 : 0
                                     enabled: libTile.showRemove  // a hidden one takes no click; focus on the tile shows it, so Tab reaches it next
                                     onClicked: app.forgetGame(modelData.path)
@@ -889,9 +889,9 @@ ApplicationWindow {
                 }
                 Repeater {
                     model: [
-                        { title: "Complete", sub: "Confirmed finished on a real Wii U.", list: app.games.filter(g => g.status === "Complete"), light: "cyan" },
-                        { title: "Plays", sub: "Tested on a real Wii U, without their updates.", list: app.games.filter(g => g.status === "Plays"), light: "grey" },
-                        { title: "Runs in Cemu", sub: "Built with this builder and played in the Cemu emulator, not yet on a real Wii U.", list: app.others, light: "grey" }
+                        { title: "Completados", sub: "Confirmados como terminados en una Wii U real.", list: app.games.filter(g => g.status === "Complete"), light: "cyan" },
+                        { title: "Jugables", sub: "Probados en una Wii U real, sin sus actualizaciones.", list: app.games.filter(g => g.status === "Plays"), light: "grey" },
+                        { title: "Funcionan en Cemu", sub: "Compilados con Builder y ejecutados en el emulador Cemu, todavía no en una Wii U real.", list: app.others, light: "grey" }
                     ]
                     Card {
                         id: tier
@@ -926,8 +926,8 @@ ApplicationWindow {
                 spacing: 34
                 Card {
                     width: 1030
-                    title: "Questions and answers"
-                    subtitle: app.faq.length ? "Tap a question to see its answer." : "No questions and answers came with this copy of the builder."
+                    title: "Preguntas y respuestas"
+                    subtitle: app.faq.length ? "Selecciona una pregunta para ver su respuesta." : "Esta copia de Builder no incluye preguntas y respuestas."
                     Repeater {
                         model: app.faq
                         Column {
@@ -951,65 +951,65 @@ ApplicationWindow {
                 }
                 Card {
                     width: 1030
-                    title: "Art and sound"
-                    subtitle: "What your games show and play on the Wii U while they start."
+                    title: "Imagen y sonido"
+                    subtitle: "Lo que muestran y reproducen tus juegos en la Wii U al iniciarse."
                     CardRow {
-                        label: "Banners and icons"
+                        label: "Banners e iconos"
                         sub: app.artKeySet ? "From SteamGridDB, with your key. GameTDB's covers fill in where it has nothing."
                                            : "Covers from GameTDB. With a free SteamGridDB key (steamgriddb.com, Preferences, API) each game gets a banner and an icon from there."
-                        Pill { text: app.artKeySet ? "Change key" : "Add key"; accessibleName: "SteamGridDB key"; tone: "cyan"; onClicked: app.setArtKey() }
+                        Pill { text: app.artKeySet ? "Cambiar clave" : "Agregar clave"; accessibleName: "Clave de SteamGridDB"; tone: "cyan"; onClicked: app.setArtKey() }
                     }
                     CardRow {
-                        label: "Start-up screens"
+                        label: "Pantallas de inicio"
                         sub: app.artStyle === "console" ? "As the Wii U's Virtual Console shows a game: its art, its name and when it came out, before a drawing of the 3DS."
                                                         : "A game's art on its own, filling the screen."
-                        Pill { text: "Art"; accessibleName: "Art on its own"; tone: app.artStyle === "picture" ? "cyan" : "grey"; onClicked: app.setArtStyle("picture") }
-                        Pill { text: "Virtual Console"; accessibleName: "As the Virtual Console shows a game"; tone: app.artStyle === "console" ? "cyan" : "grey"; onClicked: app.setArtStyle("console") }
+                        Pill { text: "Arte"; accessibleName: "Art on its own"; tone: app.artStyle === "picture" ? "cyan" : "grey"; onClicked: app.setArtStyle("picture") }
+                        Pill { text: "Consola virtual"; accessibleName: "As the Virtual Console shows a game"; tone: app.artStyle === "console" ? "cyan" : "grey"; onClicked: app.setArtStyle("console") }
                     }
                     CardRow {
-                        label: "Start-up sound"
+                        label: "Sonido de inicio"
                         sub: app.soundSet ? "Your sound plays while a game starts." : "None: games start silently. Choose a WAV file to have one."
-                        Pill { text: "Choose"; accessibleName: "Choose the start-up sound"; tone: "cyan"; onClicked: app.chooseSound() }
-                        Pill { text: "Remove"; accessibleName: "Remove the start-up sound"; tone: "red"; visible: app.soundSet; onClicked: app.removeSound() }
+                        Pill { text: "Seleccionar"; accessibleName: "Seleccionar el sonido de inicio"; tone: "cyan"; onClicked: app.chooseSound() }
+                        Pill { text: "Quitar"; accessibleName: "Quitar el sonido de inicio"; tone: "red"; visible: app.soundSet; onClicked: app.removeSound() }
                     }
                 }
                 Card {
                     width: 1030
-                    title: "About"
+                    title: "Acerca de"
                     subtitle: "3Dii U Builder " + app.version
                     CardRow {
-                        label: "Version " + app.version; sub: "Free and open-source: the licences and the software it carries."
-                        Pill { text: "About and licences"; onClicked: app.about() }
+                        label: "Version " + app.version; sub: "Gratuito y de código abierto: licencias y software incluido."
+                        Pill { text: "Acerca del proyecto y sus licencias"; onClicked: app.about() }
                     }
                     CardRow {
-                        label: "Window"; sub: "This one, or a simple one of plain tabs, buttons and file paths."
-                        Pill { text: "This one"; accessibleName: "Keep this window"; tone: "cyan" }
-                        Pill { text: "Simple"; accessibleName: "Switch to the simple window"; enabled: !app.building; onClicked: app.setLayout("simple") }
+                        label: "Ventana"; sub: "Esta ventana o una versión sencilla con pestañas, botones y rutas de archivos."
+                        Pill { text: "Esta"; accessibleName: "Mantener esta ventana"; tone: "cyan" }
+                        Pill { text: "Sencilla"; accessibleName: "Cambiar a la ventana sencilla"; enabled: !app.building; onClicked: app.setLayout("simple") }
                     }
                     CardRow {
                         id: updatesRow
                         readonly property string st: app.updateState
                         readonly property bool offered: ["available", "downloading", "unpacking", "ready", "restarting", "failed"].indexOf(st) >= 0
-                        label: app.releaseTag ? "Release " + app.releaseTag : "A test build"
+                        label: app.releaseTag ? "Release " + app.releaseTag : "Una compilación de prueba"
                         sub: st === "checking" ? "Checking..." : st === "none" ? "No newer version found."  // also what a check that couldn't reach GitHub ends in
                             : st === "downloading" || st === "unpacking" ? "A newer version is being downloaded."
                             : st === "ready" || st === "restarting" ? "A newer version is ready."
                             : offered ? "A newer version is out." : ""
-                        Pill { text: "Show"; accessibleName: "Show the update on the Build page"; tone: "cyan"; visible: updatesRow.offered; onClicked: win.page = "build" }
-                        Pill { text: "Check for updates"; enabled: app.updateState !== "checking"; onClicked: app.checkUpdate() }
+                        Pill { text: "Mostrar"; accessibleName: "Mostrar la actualización en la página Compilar"; tone: "cyan"; visible: updatesRow.offered; onClicked: win.page = "build" }
+                        Pill { text: "Buscar actualizaciones"; enabled: app.updateState !== "checking"; onClicked: app.checkUpdate() }
                     }
                     Label {
                         x: 64; width: 1030 - 64 - 40
                         visible: app.updateSetAside
-                        text: "An update didn't start on this PC before and was set aside. Check for updates to try it again."
+                        text: "Una actualización anterior no pudo iniciarse en este PC y se apartó. Busca actualizaciones para volver a intentarlo."
                         color: pal.subLabel; font.pixelSize: 17; wrapMode: Text.WordWrap
                         bottomPadding: 10
                     }
                     CardRow {
-                        label: "Look"; sub: "System follows Windows' light or dark setting."
-                        Pill { text: "System"; accessibleName: "System theme"; tone: app.themeMode === "system" ? "cyan" : "grey"; onClicked: app.setThemeMode("system") }
-                        Pill { text: "Light"; accessibleName: "Light theme"; tone: app.themeMode === "light" ? "cyan" : "grey"; onClicked: app.setThemeMode("light") }
-                        Pill { text: "Dark"; accessibleName: "Dark theme"; tone: app.themeMode === "dark" ? "cyan" : "grey"; onClicked: app.setThemeMode("dark") }
+                        label: "Apariencia"; sub: "El sistema sigue la configuración clara u oscura de Windows."
+                        Pill { text: "Sistema"; accessibleName: "Tema del sistema"; tone: app.themeMode === "system" ? "cyan" : "grey"; onClicked: app.setThemeMode("system") }
+                        Pill { text: "Claro"; accessibleName: "Tema claro"; tone: app.themeMode === "light" ? "cyan" : "grey"; onClicked: app.setThemeMode("light") }
+                        Pill { text: "Oscuro"; accessibleName: "Tema oscuro"; tone: app.themeMode === "dark" ? "cyan" : "grey"; onClicked: app.setThemeMode("dark") }
                     }
                 }
             }
@@ -1043,12 +1043,12 @@ ApplicationWindow {
                             Hit { ringRadius: 21; name: modelData.label; role: Accessible.MenuItem; onActivated: { cardMenu.visible = false; app.pickCard(modelData.path) } }
                         }
                     }
-                    Label { x: 16; height: 42; verticalAlignment: Text.AlignVCenter; visible: app.cards.length === 0; text: "No SD card found"; color: pal.subLabel; font.pixelSize: 17 }
+                    Label { x: 16; height: 42; verticalAlignment: Text.AlignVCenter; visible: app.cards.length === 0; text: "No se encontró ninguna tarjeta SD"; color: pal.subLabel; font.pixelSize: 17 }
                     Rectangle {
                         width: 356; height: 42; radius: 21
                         color: againHover.hovered ? pal.gloss : "transparent"
                         HoverHandler { id: againHover }
-                        Label { x: 16; anchors.verticalCenter: parent.verticalCenter; text: "Look again"; color: pal.cyanText; font.pixelSize: 17 }
+                        Label { x: 16; anchors.verticalCenter: parent.verticalCenter; text: "Volver a buscar"; color: pal.cyanText; font.pixelSize: 17 }
                         Hit { id: lookAgain; ringRadius: 21; name: "Look again for SD cards"; role: Accessible.MenuItem; onActivated: app.refreshCards() }
                     }
                 }
@@ -1072,16 +1072,16 @@ ApplicationWindow {
                 Column {
                     id: artCol
                     x: 12; y: 12; width: 356
-                    ArtEntry { id: artFirst; label: "Start-up screen art..."; chosen: app.artText; onPicked: { artMenu.visible = false; app.chooseArt() } }
-                    ArtEntry { label: "Wii U Menu icon..."; chosen: app.iconText; onPicked: { artMenu.visible = false; app.chooseIcon() } }
-                    ArtEntry { label: "GamePad start screen..."; chosen: app.padArtText; onPicked: { artMenu.visible = false; app.choosePadArt() } }
-                    ArtEntry { label: "This game's sound..."; chosen: app.gameSoundText; onPicked: { artMenu.visible = false; app.chooseGameSound() } }
-                    ArtEntry { label: "GamePad bezel..."; chosen: app.bezelText; onPicked: { artMenu.visible = false; app.chooseBezel() } }
-                    ArtEntry { label: "Remove the bezel"; danger: true; visible: app.hasBezel; onPicked: { artMenu.visible = false; app.removeBezel() } }
-                    ArtEntry { label: "Remove the game's sound"; danger: true; visible: app.hasGameSound; onPicked: { artMenu.visible = false; app.removeGameSound() } }
-                    ArtEntry { label: "Remove the GamePad picture"; danger: true; visible: app.hasPadArt; onPicked: { artMenu.visible = false; app.removePadArt() } }
-                    ArtEntry { label: "Remove the icon picture"; danger: true; visible: app.hasIconArt; onPicked: { artMenu.visible = false; app.removeIcon() } }
-                    ArtEntry { label: "Remove the art and icon"; danger: true; visible: app.hasArt; onPicked: { artMenu.visible = false; app.removeArt() } }
+                    ArtEntry { id: artFirst; label: "Imagen de las pantallas de inicio..."; chosen: app.artText; onPicked: { artMenu.visible = false; app.chooseArt() } }
+                    ArtEntry { label: "Icono del menú de Wii U..."; chosen: app.iconText; onPicked: { artMenu.visible = false; app.chooseIcon() } }
+                    ArtEntry { label: "Imagen de inicio del GamePad..."; chosen: app.padArtText; onPicked: { artMenu.visible = false; app.choosePadArt() } }
+                    ArtEntry { label: "Sonido de este juego..."; chosen: app.gameSoundText; onPicked: { artMenu.visible = false; app.chooseGameSound() } }
+                    ArtEntry { label: "Marco del GamePad..."; chosen: app.bezelText; onPicked: { artMenu.visible = false; app.chooseBezel() } }
+                    ArtEntry { label: "Quitar el marco"; danger: true; visible: app.hasBezel; onPicked: { artMenu.visible = false; app.removeBezel() } }
+                    ArtEntry { label: "Quitar el sonido del juego"; danger: true; visible: app.hasGameSound; onPicked: { artMenu.visible = false; app.removeGameSound() } }
+                    ArtEntry { label: "Quitar la imagen del GamePad"; danger: true; visible: app.hasPadArt; onPicked: { artMenu.visible = false; app.removePadArt() } }
+                    ArtEntry { label: "Quitar la imagen del icono"; danger: true; visible: app.hasIconArt; onPicked: { artMenu.visible = false; app.removeIcon() } }
+                    ArtEntry { label: "Quitar la imagen y el icono"; danger: true; visible: app.hasArt; onPicked: { artMenu.visible = false; app.removeArt() } }
                 }
             }
         }
