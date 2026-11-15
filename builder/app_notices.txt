@@ -1,38 +1,34 @@
-Third-party software in 3Dii U Builder
-======================================
+Software de terceros incluido en 3Dii U Builder
+================================================
 
-3Dii U Builder is free and open-source under the European Union Public Licence v1.2 (LICENSE.txt, beside this file). Its
-source is at https://github.com/J-Glitch2502/3dii-u and in this app's engine folder.
+3Dii U Builder es gratuito y de código abierto bajo la Licencia Pública de la Unión Europea v1.2 (LICENSE.txt, junto a este archivo). Su código fuente está en https://github.com/J-Glitch2502/3dii-u y en la carpeta engine de esta aplicación.
 
-It carries the programs and libraries below, each under its own licence. THIRD_PARTY_LICENSES.md, beside this file, has
-every notice and the full text of every licence. Each GitHub release also offers the source of the GPL and LGPL parts.
+Incluye los siguientes programas y bibliotecas, cada uno bajo su propia licencia. THIRD_PARTY_LICENSES.md, junto a este archivo, contiene todos los avisos y el texto completo de cada licencia. Cada versión publicada en GitHub también ofrece el código fuente de los componentes GPL y LGPL.
 
-3dsrecomp by Nathan Soufflet (nathsou), EUPL-1.2: the recompiler and runtime the builder is built on, with this project's changes
-  engine\third_party\3dsrecomp, with its source: https://github.com/nathsou/3dsrecomp
+3dsrecomp, de Nathan Soufflet (nathsou), EUPL-1.2: el recompilador y el entorno de ejecución en los que se basa Builder, con las modificaciones de este proyecto.
+  engine\third_party\3dsrecomp, con su código fuente: https://github.com/nathsou/3dsrecomp
 
-devkitPro: devkitPPC (GCC 16.2.0 and Binutils 2.47, GNU GPL v3 or later; newlib 4.6.0, BSD-style), wut 1.9.2 (zlib licence),
-wut-tools 1.3.5 (GNU GPL v2 or later). GCC's runtime libraries carry the GCC Runtime Library Exception.
-  engine\devkitpro, licence texts in its licenses folders: https://devkitpro.org/ and https://github.com/devkitPro
-  The folder also holds devkitPro packages the build doesn't use (libogc2, SDL2, portlibs and others), each with its licence.
+devkitPro: devkitPPC (GCC 16.2.0 y Binutils 2.47, GNU GPL v3 o posterior; newlib 4.6.0, licencia de estilo BSD), wut 1.9.2 (licencia zlib), wut-tools 1.3.5 (GNU GPL v2 o posterior). Las bibliotecas de ejecución de GCC incluyen la GCC Runtime Library Exception.
+  engine\devkitpro; textos de licencia en sus carpetas licenses: https://devkitpro.org/ y https://github.com/devkitPro
+  La carpeta también contiene paquetes de devkitPro que la compilación no utiliza (libogc2, SDL2, portlibs y otros), cada uno con su propia licencia.
 
-CafeGLSL 1.0.0-rc1 by Exzap (MIT), built on Mesa (MIT and others)
-  engine\third_party\cafeglsl and engine\third_party\cafeglsl_ppc: https://github.com/Exzap/CafeGLSL
-MinGW-w64 winpthreads (MIT and BSD-style) and zlib (zlib licence), with CafeGLSL's Windows build
+CafeGLSL 1.0.0-rc1, de Exzap (MIT), basado en Mesa (MIT y otras licencias).
+  engine\third_party\cafeglsl y engine\third_party\cafeglsl_ppc: https://github.com/Exzap/CafeGLSL
+MinGW-w64 winpthreads (MIT y estilo BSD) y zlib (licencia zlib), incluidos con la compilación de CafeGLSL para Windows.
 
-FFmpeg 4.4's libavcodec and libavutil, AAC decoder only (GNU LGPL v2.1 or later)
+libavcodec y libavutil de FFmpeg 4.4; únicamente el decodificador AAC (GNU LGPL v2.1 o posterior).
   engine\toolchain\aac_ppc: https://ffmpeg.org/
 
-makerom 0.19.0 from Project_CTR by 3DSGuy, applestash and Jakcron (MIT), with Mbed TLS (Apache 2.0) and libyaml (MIT)
+makerom 0.19.0 de Project_CTR, de 3DSGuy, applestash y Jakcron (MIT), junto con Mbed TLS (Apache 2.0) y libyaml (MIT).
   _internal\bin\makerom.exe: https://github.com/3DSGuy/Project_CTR
 
-Python 3.14 (Python Software Foundation License), with OpenSSL 3 (Apache 2.0) and the libraries Python ships
-Qt 6.12 and PySide6 / Shiboken6 6.12 (GNU LGPL v3), as separate DLLs that can be replaced with other builds
-pyctr (MIT), PyCryptodome (BSD 2-Clause and public domain), cryptography (Apache 2.0 or BSD 3-Clause), cffi and setuptools (MIT)
-PyInstaller bootloader (GNU GPL v2 or later, with its exception for bundled programs)
-Microsoft Visual C++ and Universal C runtime files, redistributed with Python under Microsoft's terms
-  all in _internal
+Python 3.14 (Python Software Foundation License), con OpenSSL 3 (Apache 2.0) y las bibliotecas que distribuye Python.
+Qt 6.12 y PySide6 / Shiboken6 6.12 (GNU LGPL v3), como DLL independientes que pueden reemplazarse por otras compilaciones.
+pyctr (MIT), PyCryptodome (BSD 2-Clause y dominio público), cryptography (Apache 2.0 o BSD 3-Clause), cffi y setuptools (MIT).
+Cargador de arranque de PyInstaller (GNU GPL v2 o posterior, con su excepción para programas empaquetados).
+Archivos de Microsoft Visual C++ y Universal C Runtime, redistribuidos con Python bajo los términos de Microsoft.
+  Todos se encuentran en _internal.
 
-The boot movie every game's title carries comes from shinyquagsire23's woomïnstaller (GNU LGPL v2.1).
+La película de arranque que incluye el título de cada juego proviene de woomïnstaller, de shinyquagsire23 (GNU LGPL v2.1).
 
-3Dii U is not affiliated with, endorsed by or sponsored by Nintendo. It is for games and system files you dumped
-yourself from consoles you own, and for homebrew.
+3Dii U no está afiliado, respaldado ni patrocinado por Nintendo. Está destinado a juegos y archivos del sistema que hayas extraído tú mismo de consolas que posees, y a homebrew.
