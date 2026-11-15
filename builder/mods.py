@@ -41,7 +41,7 @@ class Mod:
             root = next(v for k, v in roots.items() if k.rsplit('/', 1)[-1] == tid)
         elif roots:
             others = sorted({r.rsplit('/', 1)[-1].upper() for r in roots})
-            raise ModError(f'This mod is for {", ".join(others)}, not this game ({tid.upper()}): it may be for another region or edition.')
+            raise ModError(f'Este mod es para {", ".join(others)}, no para este juego ({tid.upper()}): puede corresponder a otra región o edición.')
         else:  # the title folder's contents, or a folder holding them: where code.* or romfs/ sits
             found = set()
             for n in names:
@@ -54,7 +54,7 @@ class Mod:
             root = min(found, key=len) if found else None
             if root is None:
                 if any(n.lower().endswith('.3gx') for n in names):
-                    raise ModError('This mod is a Luma plugin (.3gx). Plugins change the game in memory while it runs, which a recompiled game '
+                    raise ModError('Este mod es un plugin de Luma (.3gx). Los plugins modifican el juego en memoria mientras se ejecuta, algo que un juego recompilado '
                                    'never reads, so it can\'t be built in.')
                 raise ModError('No mod files in there: a mod has a romfs folder, code.bin, code.ips or code.bps (luma/titles/<title id>/).')
         prefix = (root + '/') if root else ''
@@ -63,7 +63,7 @@ class Mod:
         self.code = next((v for k, v in self.files.items() if k.lower() in CODE), None)  # member names, as open() takes them
         self.exheader = next((v for k, v in self.files.items() if k.lower() == 'exheader.bin'), None)
         if not (self.romfs or self.code or self.exheader):
-            raise ModError('The mod\'s folder for this game is empty.')
+            raise ModError('La carpeta del mod para este juego está vacía.')
 
     @staticmethod
     def _prefixes(name):
@@ -332,7 +332,7 @@ def write_romfs(root, src, out, mod_files=None):
                 while left:
                     chunk = src.read(min(8 << 20, left))
                     if not chunk:
-                        raise ModError('The game\'s RomFS ended early.')
+                        raise ModError('El RomFS del juego terminó antes de lo esperado.')
                     o.write(chunk)
                     left -= len(chunk)
     os.replace(tmp, out)
@@ -367,13 +367,13 @@ def apply(mods, game_dir, log=print):
         info = dumps.program_info(ex)
         code = open(code_path, 'rb').read()
         if len(code) < (info['text']['pages'] + info['rodata']['pages']) * 0x1000 + info['data']['size']:
-            raise ModError('The modded code is shorter than its header says: the mod may need its own exheader.bin, or it\'s for another version.')
+            raise ModError('El código modificado es más corto de lo que indica su encabezado: el mod puede necesitar su propio exheader.bin o corresponder a otra versión.')
         json.dump(info, open(os.path.join(game_dir, 'info.json'), 'w'), indent=1)
     if not replaced:
         return 0
     images = [p for p in (os.path.join(game_dir, 'update_romfs.bin'), os.path.join(game_dir, 'romfs.bin')) if os.path.exists(p)]
     if not images:
-        raise ModError('This game has no RomFS for the mod\'s files to go in.')
+        raise ModError('Este juego no tiene un RomFS donde incorporar los archivos del mod.')
     trees = []
     for p in images:
         with open(p, 'rb') as f:
