@@ -34,7 +34,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FROZEN = getattr(sys, 'frozen', False)
 WIN = sys.platform == 'win32'
 NO_WINDOW = 0x08000000 if WIN else 0  # the build's compilers would each open a console window otherwise
-DUMPS = '3DS games (*.3ds *.cci *.cia *.cxi *.app);;All files (*.*)'
+DUMPS = 'Juegos de 3DS (*.3ds *.cci *.cia *.cxi *.app);;Todos los archivos (*.*)'
 DUMP_EXTS = ('.3ds', '.cci', '.cia', '.cxi', '.app')
 STAGE_OF = {n: i for i, (n, _) in enumerate(pipeline.STAGES)}
 NO_ART = "Icono propio del juego"
@@ -559,7 +559,7 @@ class App(QObject):
     def chooseMod(self, how):
         start = os.path.dirname(self.game.path)
         if how == 'zip':
-            path = QFileDialog.getOpenFileName(None, f'Selecciona el mod para {self._s["gameName"]}', start, 'Mods (*.zip);;All files (*.*)')[0]
+            path = QFileDialog.getOpenFileName(None, f'Selecciona el mod para {self._s["gameName"]}', start, 'Mods (*.zip);;Todos los archivos (*.*)')[0]
         else:
             path = QFileDialog.getExistingDirectory(None, f'Carpeta del mod para {self._s["gameName"]}', start)
         if not path:
@@ -875,7 +875,7 @@ class App(QObject):
 
     @Slot()
     def chooseOtp(self):
-        p = QFileDialog.getOpenFileName(None, 'Archivo otp.bin de tu Wii U', os.path.dirname(self.st.get('otp', '')), 'otp.bin (otp.bin);;All files (*.*)')[0]
+        p = QFileDialog.getOpenFileName(None, 'Archivo otp.bin de tu Wii U', os.path.dirname(self.st.get('otp', '')), 'otp.bin (otp.bin);;Todos los archivos (*.*)')[0]
         if p:
             self.st['otp'] = p
             self.refresh_files()
