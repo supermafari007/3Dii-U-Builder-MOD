@@ -37,12 +37,12 @@ NO_WINDOW = 0x08000000 if WIN else 0  # the build's compilers would each open a 
 DUMPS = '3DS games (*.3ds *.cci *.cia *.cxi *.app);;All files (*.*)'
 DUMP_EXTS = ('.3ds', '.cci', '.cia', '.cxi', '.app')
 STAGE_OF = {n: i for i, (n, _) in enumerate(pipeline.STAGES)}
-NO_ART = "The game's own icon"
-NO_ICON_ART = 'The same as the art'  # the Wii U Menu icon without a picture of its own
-NO_BEZEL = 'Black'  # the GamePad beside the screens without a picture
-NO_PAD_ART = 'The same as the TV'  # the GamePad's start-up screen without a picture of its own
-NO_SAVE = 'None: the game starts a save of its own'  # no 3DS save packed in
-NO_GAME_SOUND = 'The one for all games'  # a game without a start-up sound of its own: the one for every game, if there is one
+NO_ART = "Icono propio del juego"
+NO_ICON_ART = 'Igual que la imagen'  # the Wii U Menu icon without a picture of its own
+NO_BEZEL = 'Negro'  # the GamePad beside the screens without a picture
+NO_PAD_ART = 'Igual que el televisor'  # the GamePad's start-up screen without a picture of its own
+NO_SAVE = 'Ninguna: el juego creará su propia partida'  # no 3DS save packed in
+NO_GAME_SOUND = 'El sonido común a todos los juegos'  # a game without a start-up sound of its own: the one for every game, if there is one
 BOOT_SOUND = os.path.join(os.path.dirname(pipeline.ARCHIVES), 'boot_sound.btsnd')  # where every build picks it up (tools/make_game_title.py)
 GAME_SOUNDS = os.path.join(os.path.dirname(BOOT_SOUND), 'boot_sounds')  # a game's own, <title id>.btsnd
 LIBRARY_MAX = 40  # games the Games page remembers
@@ -78,7 +78,7 @@ def covers_folder():
     return os.path.join(os.path.dirname(settings_file()), 'covers')
 
 
-FROM_SGDB, FROM_TDB = 'From SteamGridDB', 'From GameTDB'
+FROM_SGDB, FROM_TDB = 'De SteamGridDB', 'De GameTDB'
 
 
 def picked(path):
@@ -290,7 +290,7 @@ class App(QObject):
         faq = [e for e in faq if isinstance(e, dict) and isinstance(e.get('q'), str) and isinstance(e.get('a'), str) and e['q'] and e['a']]             if isinstance(faq, list) else []
         theme_mode = self.st.get('theme')
         self._s = dict(hasGame=False, gameName='', maker='', badge='', known=False, icon='', meta='',
-                       note='Pick one of your 3DS games to start. The builder reads its name and icon, and asks about its update and DLC.',
+                       note='Selecciona uno de tus juegos de 3DS para comenzar. Builder leerá su nombre e icono y preguntará por su actualización y DLC.',
                        updateText='None', hasUpdate=False, dlcText='None', hasDlc=False, modText='None', hasMod=False, artText=NO_ART, hasArt=False, artUrl='', iconText=NO_ART, hasIconArt=False, iconArtUrl='', tileUrl='', bezelText=NO_BEZEL, hasBezel=False, padArtText=NO_PAD_ART, hasPadArt=False, gameSoundText=NO_GAME_SOUND, hasGameSound=False, saveText=NO_SAVE, hasSave=False, artKeySet=bool(self.st.get('sgdb_key')), soundSet=os.path.isfile(BOOT_SOUND), artStyle=self.st.get('art_style', 'console'), library=[], keysOk=False, keysNeeded=False, keysText='', otpOk=False,
                        otpText='', sysOk=False, sysText='', target=self.st.get('target', 'card'), destText='', cards=[], building=False, view='form', stages=[],
                        stage=-1, failed=False, progress=0.0, detail='', log='', resultText='', where='', dialog=None, version=VERSION,
@@ -399,7 +399,7 @@ class App(QObject):
         try:
             return dumps.Dump(path)
         except Exception as e:  # a truncated or foreign file can fail anywhere in its headers
-            self.tell('Can\'t read that file', f'{os.path.basename(path)}: {e if isinstance(e, (dumps.DumpError, OSError)) else "not a 3DS dump this can read"}',
+            self.tell('No se puede leer el archivo', f'{os.path.basename(path)}: {e if isinstance(e, (dumps.DumpError, OSError)) else "not a 3DS dump this can read"}',
                       'error')
             return None
 
@@ -417,25 +417,25 @@ class App(QObject):
         if d is None:
             return
         if d.kind in ('update', 'dlc'):
-            self.tell(f'That\'s {"an update" if d.kind == "update" else "DLC"}', 'Choose the game itself first: you\'re asked about its update and DLC right after.')
+            self.tell(f'Eso es {"una actualización" if d.kind == "update" else "DLC"}', 'Primero selecciona el juego. Después se te preguntará por su actualización y DLC.')
             return
         if d.kind not in ('game', 'demo'):
-            self.tell('That isn\'t a game', 'It looks like a system title.', 'error')
+            self.tell('Eso no es un juego', 'Parece ser un título del sistema.', 'error')
             return
         if d.encrypted() and not decrypt.have_keys(self.st['keys']):
-            self.tell('This dump is encrypted', 'The builder needs the keys from your own 3DS to read it. Choose the folder with boot9.bin and seeddb.bin '
-                                                'under 3DS keys, then pick the game again.', 'warn')
+            self.tell('Este volcado está cifrado', 'Builder necesita las claves de tu propia 3DS para leerlo. Selecciona la carpeta que contiene boot9.bin y seeddb.bin '
+                                                'en Claves de 3DS y vuelve a seleccionar el juego.', 'warn')
             return
         try:
             decrypt.use_keys(self.st['keys'])
             d.read_names()
         except dumps.DumpError as e:
-            self.tell('Couldn\'t read this game', str(e), 'error')
+            self.tell('No se pudo leer este juego', str(e), 'error')
             return
         self.game, self.update, self.dlc, self.mod = d, None, None, None
         info = pipeline.profile_for(d) or pipeline.derived(d)
         known = info['status'] in ('Plays', 'Complete')  # compat.json: tested on a real Wii U, or finished there
-        self.set(hasGame=True, gameName=info['name'], maker=d.publisher or '', known=known, badge=f'{info["status"]} on Wii U' if known else 'Untested',
+        self.set(hasGame=True, gameName=info['name'], maker=d.publisher or '', known=known, badge=('Completo en Wii U' if info['status'] == 'Complete' else 'Jugable en Wii U') if known else 'Sin probar',
                  icon=icon_url(d.icon) if d.icon else '', meta=f'{d.product}  ·  {d.title_id:016X}  ·  {describe(d)}', view='form')
         self.set_extra('update', None)
         self.set_extra('dlc', None)
@@ -483,7 +483,7 @@ class App(QObject):
         if self._s['building'] or (self.game and self.game.path == path):
             return
         if not os.path.isfile(path):
-            self.tell('That game has moved', 'Its file is no longer where it was. Choose it again on the Build page (Ctrl+O).', 'warn')
+            self.tell('El juego se ha movido', 'El archivo ya no está en su ubicación anterior. Vuelve a seleccionarlo en la página Compilar (Ctrl+O).', 'warn')
             self.forgetGame(path)
             return
         self.open_game(path, ask=False)
@@ -497,13 +497,13 @@ class App(QObject):
     def refresh_note(self):
         info = pipeline.profile_for(self.game)
         if info:
-            note = f'Tested on a real Wii U: {info["note"][0].lower() + info["note"][1:]}'
+            note = f'Probado en una Wii U real: {info["note"][0].lower() + info["note"][1:]}'
             if self.update:
-                note += ' It was tested without its update: with it, it should play the same, but nobody has checked yet.'
+                note += ' Se probó sin su actualización: debería funcionar igual con ella, pero todavía nadie lo ha comprobado.'
         else:
-            note = 'Nobody has played this one on a Wii U yet: it may not start, or it may stop partway.'
+            note = 'Todavía nadie ha probado este juego en una Wii U: puede que no inicie o que se detenga a mitad de la ejecución.'
         if self.mod:
-            note += ' With a mod it\'s untested: the mod is built in before the game is recompiled, so its code runs like the game\'s.'
+            note += ' Con un mod no está probado: el mod se incorpora antes de recompilar el juego, por lo que su código se ejecuta como el del propio juego.'
         self.set(note=note)
 
     def nearby(self):
@@ -525,19 +525,19 @@ class App(QObject):
     def extras(self):
         """the questions after a game is chosen: its update, then its DLC"""
         found, name = self.nearby(), self._s['gameName']
-        for kind, what, why in (('update', 'an update', 'the latest version of the game, with its fixes'),
-                                ('dlc', 'DLC', 'its downloadable content: extra levels, items and so on')):
+        for kind, what, why in (('update', 'una actualización', 'la versión más reciente del juego, con sus correcciones'),
+                                ('dlc', 'DLC', 'su contenido descargable: niveles, objetos y otros extras')):
             d = found.get(kind)
             if d:
                 if (yield dict(title=f'Se encontró {what} para {name}', message=f'{describe(d)}  ·  {os.path.basename(d.path)}\n\n¿Quieres utilizarlo? Agrega {why}.',
-                               yes='Use it', no='No thanks', tone='ask')):
+                               yes='Usarla', no='No, gracias', tone='ask')):
                     self.set_extra(kind, d)
             elif (yield dict(title=f'¿Tienes {what} para {name}?', message=f'Utilizarlo agrega {why}. Selecciona «Lo tengo» para elegir el archivo.',
-                             yes='I have it', no='No', tone='ask')):
+                             yes='Lo tengo', no='No', tone='ask')):
                 self.chooseExtra(kind)
         if (yield dict(title=f'¿Tienes un mod para {name}?', message='Un mod creado para Luma en una 3DS: un .zip o una carpeta que contenga luma/titles/<title id>/ '
-                       'in it (new files, code.ips, code.bps or code.bin). The builder puts it in before recompiling. Plugins (.3gx, like CTGP-7) '
-                       'can\'t be built in.', yes='I have one', no='No', tone='ask')):
+                       'en su interior (archivos nuevos, code.ips, code.bps o code.bin). Builder lo incorpora antes de recompilar. Los plugins (.3gx, como CTGP-7) '
+                       'no se pueden incorporar.', yes='Tengo uno', no='No', tone='ask')):
             self.chooseMod('zip' if (yield dict(title='¿Un .zip o una carpeta?', message='¿En qué formato está el mod?', yes='Un .zip', no='Una carpeta', tone='ask'))
                            else 'folder')
 
@@ -551,7 +551,7 @@ class App(QObject):
         if d is None:
             return
         if d.kind != kind or d.unique != self.game.unique:
-            self.tell(f'That isn\'t the {what}', f'It isn\'t the {what} for {self._s["gameName"]}.', 'error')
+            self.tell(f'Eso no es {what}', f'No corresponde a {what} de {self._s["gameName"]}.', 'error')
             return
         self.set_extra(kind, d)
 
@@ -567,32 +567,32 @@ class App(QObject):
         try:
             m = mods.Mod(path, self.game.title_id)
         except (mods.ModError, OSError) as e:
-            self.tell('That mod can\'t be used', str(e), 'error')
+            self.tell('No se puede utilizar ese mod', str(e), 'error')
             return
-        parts = ([f'{len(m.romfs)} files'] if m.romfs else []) + ([m.code.rsplit('/', 1)[-1]] if m.code else []) + (['exheader'] if m.exheader else [])
+        parts = ([f'{len(m.romfs)} archivos'] if m.romfs else []) + ([m.code.rsplit('/', 1)[-1]] if m.code else []) + (['exheader'] if m.exheader else [])
         m.close()
         self.set_extra('mod', path, ', '.join(parts))
 
     def ask_picture(self, title):
         """a picture the player picks, or None"""
-        path = QFileDialog.getOpenFileName(None, title, self.st.get('art_folder', ''), 'Pictures (*.png *.jpg *.jpeg *.bmp *.webp);;All files (*.*)')[0]
+        path = QFileDialog.getOpenFileName(None, title, self.st.get('art_folder', ''), 'Imágenes (*.png *.jpg *.jpeg *.bmp *.webp);;Todos los archivos (*.*)')[0]
         if not path:
             return None
         if QImage(path).isNull():
-            self.tell("That picture can't be read", 'Choose a PNG or JPEG picture.', 'error')
+            self.tell("No se puede leer esa imagen", 'Selecciona una imagen PNG o JPEG.', 'error')
             return None
         self.st['art_folder'] = os.path.dirname(path)
         return path
 
     @Slot()
     def chooseArt(self):
-        path = self.ask_picture(f'A picture for {self._s["gameName"]}: its cover art, say')
+        path = self.ask_picture(f'Imagen para {self._s["gameName"]}, por ejemplo, su portada')
         if path:
             self.set_art(path, self.icon_art if picked(self.icon_art) else None)  # an icon the player picked stays, a fetched one goes with the old art
 
     @Slot()
     def chooseIcon(self):
-        path = self.ask_picture(f'A square picture for the Wii U Menu icon of {self._s["gameName"]}')
+        path = self.ask_picture(f'Imagen cuadrada para el icono del menú de Wii U de {self._s["gameName"]}')
         if path:
             self.set_art(self.art, path)
 
@@ -606,7 +606,7 @@ class App(QObject):
 
     @Slot()
     def chooseBezel(self):
-        path = self.ask_picture(f'A bezel or overlay for the GamePad beside the screens of {self._s["gameName"]}: any picture, scaled to fill it')
+        path = self.ask_picture(f'Marco u overlay para el GamePad junto a las pantallas de {self._s["gameName"]}: cualquier imagen, ajustada para cubrirlo')
         if path:
             self.set_bezel(path)
 
@@ -632,7 +632,7 @@ class App(QObject):
 
     @Slot()
     def choosePadArt(self):
-        path = self.ask_picture(f'A picture for the GamePad while {self._s["gameName"]} starts, shown as it is')
+        path = self.ask_picture(f'Imagen exclusiva para el inicio de {self._s["gameName"]} en el GamePad, mostrada tal cual')
         if path:
             self.set_pad_art(path)
 
@@ -650,7 +650,7 @@ class App(QObject):
     @Slot()
     def chooseGameSound(self):
         sound = os.path.join(GAME_SOUNDS, f'{self.game.title_id:016x}.btsnd')
-        if self.ask_sound(f'A sound to play while {self._s["gameName"]} starts', sound):
+        if self.ask_sound(f'Sonido para reproducir al iniciar {self._s["gameName"]}', sound):
             self.set_game_sound(sound)
 
     @Slot()
@@ -667,7 +667,7 @@ class App(QObject):
         self.game_sound = path
         if self.game and remember:
             self.keep_for_game('boot_sound', path)
-        self.set(gameSoundText='Its own' if path else NO_GAME_SOUND, hasGameSound=bool(path))
+        self.set(gameSoundText='Propio' if path else NO_GAME_SOUND, hasGameSound=bool(path))
 
     @Slot()
     def bringSave(self):
@@ -681,7 +681,7 @@ class App(QObject):
         try:
             saves.checked(chosen)
         except (saves.SaveError, OSError) as e:
-            self.tell("That folder can't be used", str(e), 'error')
+            self.tell("No se puede utilizar esa carpeta", str(e), 'error')
             return
         self.set_save(chosen)
 
@@ -815,7 +815,7 @@ class App(QObject):
         p = QFileDialog.getExistingDirectory(None, 'Carpeta con las claves de tu 3DS (boot9.bin, seeddb.bin)', self.st['keys'])
         if p:
             if not decrypt.have_keys(p):
-                self.tell('No keys there', 'There\'s no boot9.bin in that folder.', 'warn')
+                self.tell('No se encontraron las claves', 'Esa carpeta no contiene boot9.bin.', 'warn')
             self.st['keys'] = p
             decrypt.use_keys(p)
             if self.st.get('system') and not dumps.have_system_archives(pipeline.ARCHIVES):
@@ -829,14 +829,14 @@ class App(QObject):
         if p:
             if not self.import_system(p):
                 if not self.system_locked:
-                    self.tell('No 3DS system files there', HELP['system'][1], 'warn')
+                    self.tell('No se encontraron archivos del sistema de 3DS', HELP['system'][1], 'warn')
                 elif decrypt.have_keys(self.st['keys']):
-                    self.tell('Those files didn\'t open', f'That is the right folder, but its files couldn\'t be decrypted with the boot9.bin in '
-                              f'{self.st["keys"]}. They open with the keys of the same 3DS they were copied from.', 'warn')
+                    self.tell('No se pudieron abrir esos archivos', f'Esa es la carpeta correcta, pero no se pudieron descifrar sus archivos con el boot9.bin de '
+                              f'{self.st["keys"]}. Se pueden abrir con las claves de la misma 3DS desde la que se copiaron.', 'warn')
                 else:
-                    self.tell('Those files need your 3DS keys', 'That is the right folder. A 3DS keeps these files encrypted, and they open with '
-                              'boot9.bin from your own 3DS.\n\nPress "Folder" next to 3DS keys and choose the folder with your boot9.bin: the '
-                              'builder then reads the system files from here by itself.', 'warn')
+                    self.tell('Esos archivos necesitan las claves de tu 3DS', 'Esa es la carpeta correcta. Una 3DS conserva estos archivos cifrados y se pueden abrir con '
+                              'boot9.bin de tu propia 3DS.\n\nPulsa «Carpeta» junto a Claves de 3DS y selecciona la carpeta que contiene boot9.bin: '
+                              'Builder leerá automáticamente los archivos del sistema desde aquí.', 'warn')
             self.refresh_files()
 
     @Slot(str)
@@ -914,16 +914,16 @@ class App(QObject):
         needed = bool(self.game and self.game.encrypted())
         card, folder = self.st.get('card', ''), self.st.get('folder', '')
         if self._s['target'] == 'card':
-            dest = f'{card}   {"Wii U card" if os.path.isdir(os.path.join(card, "wiiu")) else "SD card"}' if card else 'No SD card found'
+            dest = f'{card}   {"Wii U card" if os.path.isdir(os.path.join(card, "wiiu")) else "SD card"}' if card else 'No se encontró ninguna tarjeta SD'
         else:
-            dest = short(folder, 40) if folder else 'Choose a folder...'
+            dest = short(folder, 40) if folder else 'Selecciona una carpeta...'
         have = decrypt.have_keys(keys)
         system = dumps.have_system_archives(pipeline.ARCHIVES)
         source = short(self.st['system'], 26) if self.st.get('system') else ''
-        self.set(sysOk=system, sysText=(source or 'Found') if system else 'Not found yet')  # short: the row has its pills beside it
+        self.set(sysOk=system, sysText=(source or 'Encontrados') if system else 'Todavía no encontrados')  # short: the row has its pills beside it
         self.set(keysOk=have, keysNeeded=needed and not have,
-                 keysText=short(keys, 26) if have else 'Not found yet' if needed else 'Only for encrypted dumps',
-                 otpOk=otp_ok(otp), otpText=short(otp, 26) if otp_ok(otp) else 'Not found yet', destText=dest)
+                 keysText=short(keys, 26) if have else 'Todavía no encontrados' if needed else 'Solo para volcados cifrados',
+                 otpOk=otp_ok(otp), otpText=short(otp, 26) if otp_ok(otp) else 'Todavía no encontrados', destText=dest)
 
     # ---- updates (updater.py): every call that reaches the network or the disk runs on a worker, which reports through updateEvent
     @Slot()
@@ -1017,9 +1017,9 @@ class App(QObject):
         if self._s['updateState'] != 'ready':
             return
         if self._s['building']:
-            self.tell('A build is running', 'Restart once the build has finished, or cancel it first.', 'warn')
+            self.tell('Hay una compilación en curso', 'Reinicia cuando termine la compilación o cancélala primero.', 'warn')
             return
-        self.set(updateState='restarting', updateMessage='Starting the new version...')  # no build starts meanwhile
+        self.set(updateState='restarting', updateMessage='Iniciando la nueva versión...')  # no build starts meanwhile
 
         def job():
             exe = updater.current(updater.own_tag())
@@ -1057,7 +1057,7 @@ class App(QObject):
         elif what == 'failed':
             self.set(updateState='failed', updateMessage=value)
         elif what == 'restart failed':
-            self.set(updateState='failed', updateMessage='The new version didn\'t start, so this one keeps running.')
+            self.set(updateState='failed', updateMessage='La nueva versión no se inició, por lo que esta versión seguirá ejecutándose.')
         elif what == 'quit':
             self.stop_for_close()  # a build left running would go on behind the new window
             QApplication.quit()
@@ -1068,19 +1068,19 @@ class App(QObject):
         if not self.game or self._s['building'] or self._s['updateState'] == 'restarting':
             return
         if not self._s['rootOk']:
-            self.tell('The build engine is missing', 'The engine folder next to 3Dii U Builder.exe holds the recompiler and its toolchain. Copy the '
-                                                     'whole 3Dii U Builder folder again, engine folder included.', 'error')
+            self.tell('Falta el motor de compilación', 'La carpeta engine, junto a 3Dii U Builder.exe, contiene el recompilador y su cadena de herramientas. Vuelve a copiar '
+                                                     'toda la carpeta 3Dii U Builder, incluida la carpeta engine.', 'error')
             return
         if not otp_ok(self.st.get('otp', '')):
-            self.tell('otp.bin is missing', 'Choose your Wii U\'s otp.bin: it should be exactly 1024 bytes.', 'warn')
+            self.tell('Falta otp.bin', 'Selecciona el otp.bin de tu Wii U: debe tener exactamente 1024 bytes.', 'warn')
             return
         dest = self.st.get('card', '') if self._s['target'] == 'card' else self.st.get('folder', '')
         if not dest or not os.path.isdir(dest):
-            self.tell('Where should it go?', 'Choose an SD card or a folder for the game.', 'warn')
+            self.tell('¿Dónde quieres guardarlo?', 'Selecciona una tarjeta SD o una carpeta para el juego.', 'warn')
             return
         self.find_system(True)
         if not dumps.have_system_archives(pipeline.ARCHIVES):
-            self.tell('The 3DS system files are missing', HELP['system'][1], 'warn')
+            self.tell('Faltan los archivos del sistema de 3DS', HELP['system'][1], 'warn')
             return
         save_settings(self.st)
         argv = [sys.executable, '--pipeline'] if FROZEN else [sys.executable.replace('pythonw.exe', 'python.exe'), '-u', os.path.join(HERE, 'pipeline.py')]
@@ -1104,7 +1104,7 @@ class App(QObject):
             argv += ['--save', self.save_in]
         self.log_lines, self.result, self.cancelled = [], None, False
         stages = [n for n, _ in pipeline.STAGES if n != 'Copying' or self._s['target'] == 'card']
-        self.set(building=True, view='building', stages=stages, stage=0, failed=False, progress=0.0, detail='Starting...', log='')
+        self.set(building=True, view='building', stages=stages, stage=0, failed=False, progress=0.0, detail='Iniciando...', log='')
         self.proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace',
                                      creationflags=NO_WINDOW, start_new_session=not WIN, env=dict(os.environ, PYTHONIOENCODING='utf-8'))
         threading.Thread(target=self.read, args=(self.proc,), daemon=True).start()
