@@ -36,8 +36,8 @@ import user_files  # noqa: E402
 WORK = os.environ.get('THREEDII_WORK') or ROOT  # the standalone app's engine may be read-only: then it builds in a folder of the user's
 WORK_GAMES = os.path.join(WORK, 'builder_work')
 ARCHIVES = os.path.join(WORK, 'system_archives') if WORK != ROOT else os.path.join(ROOT, 'games', 'system_archives')
-STAGES = [('Reading your game', 2), ('Decrypting', 8), ('Unpacking', 7), ('Finding the game\'s code', 2), ('Recompiling', 48), ('Shaders', 14),
-          ('Making the title', 2), ('Packing the WUP', 10), ('Copying', 7)]
+STAGES = [('Leyendo el juego', 2), ('Descifrando', 8), ('Extrayendo archivos', 7), ('Buscando el código del juego', 2), ('Recompilando', 48), ('Shaders', 14),
+          ('Creando el título', 2), ('Empaquetando el WUP', 10), ('Copiando', 7)]
 
 
 class Progress:
@@ -154,7 +154,7 @@ def copy_to(source, target_dir):
                 PROGRESS.at(done / total * 0.8)
     if any(filecmp.cmpfiles(source, new, names, shallow=False)[1:]):
         shutil.rmtree(new, ignore_errors=True)
-        fail('The copy came out different from the original: the card may be failing. Nothing was replaced.')
+        fail('La copia no coincide con el original: es posible que la tarjeta esté fallando. No se reemplazó ningún archivo.')
     if os.path.isdir(target):
         shutil.rmtree(target)
     os.rename(new, target)
@@ -205,9 +205,9 @@ def main():
         if s:
             s.reconfigure(errors='backslashreplace')
     if sys.platform != 'win32':
-        fail('Building on Linux isn\'t ready yet: this version builds on Windows.')
+        fail('La compilación en Linux todavía no está disponible: esta versión compila en Windows.')
     if not (a.card or a.out):
-        fail('Choose an SD card or a folder for the WUP.')
+        fail('Selecciona una tarjeta SD o una carpeta para el WUP.')
     problem = user_files.check_otp(a.otp)
     if problem:
         fail(problem)
@@ -217,17 +217,17 @@ def main():
     try:
         game = dumps.Dump(a.game)
         if game.kind not in ('game', 'demo'):
-            fail(f'That file is {"an update" if game.kind == "update" else "DLC" if game.kind == "dlc" else "not a game"}. Choose the game itself first.')
+            fail(f'Ese archivo es {"una actualización" if game.kind == "update" else "DLC" if game.kind == "dlc" else "no es un juego"}. Primero selecciona el juego.')
         extras = []
         for path, kind in ((a.update, 'update'), (a.dlc, 'dlc')):
             if path:
                 d = dumps.Dump(path)
                 if d.kind != kind or d.unique != game.unique:
-                    fail(f'{os.path.basename(path)} isn\'t the {"update" if kind == "update" else "DLC"} for this game.')
+                    fail(f'{os.path.basename(path)} no corresponde a la {"actualización" if kind == "update" else "DLC"} de este juego.')
                 extras.append(d)
         encrypted = [d for d in [game] + extras if d.encrypted()]
         if encrypted and not decrypt.have_keys(a.keys):
-            fail(f'{os.path.basename(encrypted[0].path)} is encrypted. Put boot9.bin and seeddb.bin from your own 3DS in {a.keys or decrypt.KEYS_DEFAULT}.')
+            fail(f'{os.path.basename(encrypted[0].path)} está cifrado. Coloca boot9.bin y seeddb.bin de tu propia 3DS en {a.keys or decrypt.KEYS_DEFAULT}.')
         problem = user_files.check_key_folder(a.keys or decrypt.KEYS_DEFAULT) if encrypted else None
         if problem:
             fail(problem)
@@ -251,7 +251,7 @@ def main():
     need = sum(d.size * (4 if d is game else 3) for d in [game] + extras) + (3 << 30)
     os.makedirs(WORK_GAMES, exist_ok=True)
     if shutil.disk_usage(WORK_GAMES).free < need:
-        fail(f'Not enough free space: building this takes about {need >> 30} GB on the drive with {WORK}.')
+        fail(f'Espacio libre insuficiente: esta compilación necesita aproximadamente {need >> 30} GB en la unidad donde está {WORK}.')
 
     PROGRESS.stage('Decrypting')
     for d in (game_dir, tmp):
@@ -323,7 +323,7 @@ def main():
             print(f'vertex records from earlier runs: {made}, and {left} whose program this dump hasn\'t', flush=True)
     b3.prepare_logs = with_vertex_programs
     if not os.path.exists(b3.BIN + 'gcc.exe'):
-        fail('The build tools aren\'t installed: see builder/README.md.')
+        fail('Las herramientas de compilación no están instaladas: consulta builder/README.md.')
     g = b3.Game(info['slug'], game_dir)  # the recipe every game gets, read from this game's own code (build3ds.py)
     if a.cold:
         g.twin = derived(game)['slug']  # its own folder in games/ is no other game's: nothing of it is borrowed
@@ -380,7 +380,7 @@ def main():
             raise shader_stop[0] if isinstance(shader_stop[0], SystemExit) else SystemExit(f'shaders: {shader_stop[0]!r}')
     except SystemExit as e:
         sys.stdout = sys.__stdout__
-        fail(f'The build stopped: {e}')
+        fail(f'La compilación se detuvo: {e}')
     sys.stdout = sys.__stdout__
     learned, dvlb = os.path.join(ROOT, 'games', derived(game)['slug'], 'shader_logs'), os.path.join(game_dir, 'shader_logs', 'dvlb.bin')
     if not known and not a.cold and WORK == ROOT and os.path.isfile(dvlb):  # its vertex programs, where its runs' logs go: make_app.py fingerprints the
@@ -416,7 +416,7 @@ def main():
     print(r.stdout.strip()[-400:], flush=True)
     if r.returncode:  # a failed pack can leave a title.tmd behind: only the exit code counts
         shutil.rmtree(wup, ignore_errors=True)
-        fail('Packing the WUP failed.')
+        fail('Falló el empaquetado del WUP.')
 
     where = wup
     if a.card:
@@ -425,7 +425,7 @@ def main():
         os.makedirs(install, exist_ok=True)
         size = sum(os.path.getsize(os.path.join(wup, f)) for f in os.listdir(wup))
         if shutil.disk_usage(install).free < size + (64 << 20):
-            fail(f'The SD card needs {size >> 20} MB free for this game.')
+            fail(f'La tarjeta SD necesita {size >> 20} MB libres para este juego.')
         where = copy_to(wup, install)
         shutil.rmtree(wup, ignore_errors=True)
     if not a.keep:  # the runtime's objects stay: every game shares them
