@@ -337,7 +337,7 @@ def main():
     g.out, g.rpx, g.nm, g.shaders = out, os.path.join(out, info['slug'] + '.rpx'), os.path.join(out, 'game.nm'), os.path.join(out, 'shaders')
     os.makedirs(out, exist_ok=True)
 
-    PROGRESS.stage('Finding the game\'s code')
+    PROGRESS.stage('Buscando el código del juego')
     # What earlier runs reached stays, and the finders add to it: a tested game's list (its base code's alone), or an untested game's own
     # games/g_<code>[_v<update>]/functions.txt, the entries its runs found missing (Kirby: Triple Deluxe's first call at 0x232670, 2026-11-08)
     learned = os.path.join(ROOT, 'games', known['slug'] if known else info['slug'], 'functions.txt')
