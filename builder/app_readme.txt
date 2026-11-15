@@ -15,7 +15,7 @@ REQUISITOS
 - El archivo otp.bin de tu Wii U, extraído de una copia de seguridad de la NAND de tu propia consola. El juego se empaqueta con él. Builder nunca muestra ni almacena la clave.
 - Una Wii U con Aroma, WUP Installer GX2 y su tarjeta SD.
 - Los archivos del sistema de tu 3DS: algunos archivos pequeños que cada 3DS conserva en su propia memoria, como la fuente del sistema que muchos juegos utilizan para mostrar texto, los componentes con los que se dibujan los personajes Mii y la lista de palabras prohibidas que los juegos consultan al escribir nombres. Los juegos los cargan desde la consola, por lo que no están en los volcados: los juegos que utilizan Miis se detienen si faltan sus datos, y Tomodachi Life lo hace si falta la lista de palabras. Puedes obtenerlos desde tu propia 3DS de cualquiera de estas maneras:
-  - Azahar: Archivo > Set Up System Archivos, con Artic Setup Tool en ejecución en tu 3DS. Builder los encontrará automáticamente.
+  - Azahar: File > Set Up System Files, con Artic Setup Tool en ejecución en tu 3DS. Builder los encontrará automáticamente.
   - GodMode9: en [1:] SYSNAND CTRNAND > title están las dos carpetas: 0004009b (fuente y datos Mii) y 000400db (lista de palabras). Selecciona 0004009b y pulsa Y; abre [0:] SDCARD, vuelve a pulsar Y y elige Copy (no Move). Después copia 000400db de la misma manera, junto a la anterior. En Builder, pulsa «Carpeta» junto a «Archivos del sistema de 3DS» y selecciona la carpeta 0004009b. Al copiarlos de esta manera, los archivos quedan cifrados, por lo que Builder necesita las claves de tu 3DS (boot9.bin) para leerlos.
   Builder también busca estos archivos en la carpeta de usuario de Citra y en Descargas, Escritorio y Documentos. Los copia una sola vez y los conserva para los juegos siguientes.
 
@@ -43,7 +43,7 @@ COMPATIBILIDAD DE JUEGOS
   Mario & Luigi: Superstar Saga + Bowser's Minions, Mario & Luigi: Bowser's Inside Story + Bowser Jr.'s Journey,
   Professor Layton and the Azran Legacy y Professor Layton and the Miracle Mask.
   Cualquiera de estas etiquetas se muestra cuando tu volcado corresponde a la misma edición que se probó. Estos juegos se probaron sin actualizaciones.
-- «Funciona en Cemu» (página Games): compilados con Builder y ejecutados en el emulador Cemu, pero todavía no probados en una Wii U real:
+- «Funciona en Cemu» (página Juegos): compilados con Builder y ejecutados en el emulador Cemu, pero todavía no probados en una Wii U real:
   Mario Kart 7, The Legend of Zelda: A Link Between Worlds, Metroid: Samus Returns, Kirby: Triple Deluxe, Rhythm Heaven Megamix,
   Phoenix Wright: Ace Attorney Trilogy, Animal Crossing: New Leaf, Kid Icarus: Uprising, Super Mario 3D Land y Miitopia.
 - «Sin probar»: cualquier otro juego y todos los juegos con mods. Puede funcionar, no iniciar o detenerse a mitad de la ejecución.
