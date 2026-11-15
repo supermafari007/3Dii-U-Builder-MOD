@@ -286,7 +286,7 @@ def main():
         d.f.close()
     shutil.rmtree(tmp, ignore_errors=True)
     if not dumps.have_system_archives(archives):  # a Miitopia built without them stopped on the console with FS "not found" (Nov 9)
-        fail('The 3DS system files are missing: the Mii data, without which Mii games stop, and the shared font. Give --emulator Azahar\'s '
+        fail('Faltan los archivos del sistema de 3DS: los datos Mii, sin los cuales se detienen los juegos que los utilizan, y la fuente compartida. Indica con --emulator la carpeta de usuario de Azahar\'s '
              ' (después de ejecutar File > Set Up System Files) o la carpeta 0004009b que GodMode9 copia desde tu 3DS (title, en CTRNAND).')
     with open(os.path.join(game_dir, 'code.bin'), 'rb') as f:  # and what this game's own code names of them (dumps.archives_named)
         lacking = [t for t in dumps.archives_named(f.read()) if not os.path.isfile(os.path.join(archives, t + '.romfs'))]
@@ -294,7 +294,7 @@ def main():
         t = lacking[0]
         fail(f'Este juego lee {dumps.ARCHIVE_NAMES.get(t, "a font")} from the 3DS itself, and your 3DS system files don\'t have it: the game would '
              f'se detendría al iniciarse. Está en la carpeta {t[:8]}: con GodMode9, copia también esa carpeta desde tu 3DS ([1:] SYSNAND CTRNAND > title), '
-             f'next to the 0004009b one, and choose the folder again under "3DS system files". Azahar\'s File > Set Up System Files brings it too.')
+             f'junto a 0004009b y vuelve a seleccionar la carpeta en «Archivos del sistema de 3DS». Azahar\'s File > Set Up System Files brings it too.')
     # what earlier runs of a game learned (render states it uses; code only static analysis misses) goes with it, if the code is the same.
     # An untested game's live under its own slug (games/g_<code>/shader_logs): a run's shader_misses.bin put there is compiled ahead next time.
     logs = os.path.join(ROOT, 'games', (known or derived(game))['slug'], 'shader_logs')
