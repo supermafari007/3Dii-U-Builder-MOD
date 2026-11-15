@@ -1,108 +1,90 @@
 3Dii U Builder {version} (beta)
 =========================
 
-3Dii U Builder turns your own 3DS game dumps into games you install on your Wii U. There's nothing else to install: this folder is the whole program.
+3Dii U Builder convierte tus propios volcados de juegos de 3DS en juegos que puedes instalar en tu Wii U. No necesitas instalar nada más: esta carpeta contiene el programa completo.
 
 
-WHAT YOU NEED
+REQUISITOS
 
-- A Windows 10 or 11 PC (64-bit). While a game builds, drive C: needs about three times the game's size free.
-- Your 3DS game dump: a .3ds, .cci, .cia, .cxi or .app file, encrypted or decrypted. Its update and DLC too, if you want them in.
-- For encrypted dumps: boot9.bin and seeddb.bin from your own 3DS, from GodMode9. Put them in C:\Users\<you>\.3ds, or choose their folder in the builder.
-  - boot9.bin: open [M:] MEMORY VIRTUAL, highlight boot9.bin and press Y, then open [0:] SDCARD, press Y again and choose Copy.
-  - seeddb.bin: press HOME, choose More..., then Build support files. It lands in gm9/out on the SD card.
-  Each row under "Your Files" in the builder has an "Info" button with these steps, and the Help page's questions and answers have them too.
-- Your Wii U's otp.bin, from your own console's NAND backup. The game is packed with it. The builder never shows the key and never stores it.
-- A Wii U with Aroma and WUP Installer GX2, and its SD card.
-- Your 3DS's system files: a few small files every 3DS keeps in its own memory, the system font many games write their text in, the
-  parts Miis are drawn from and the list of bad words games check typed names against. Games load them from the console, so dumps don't
-  have them: Mii games stop without the Mii parts, and Tomodachi Life without the word list. From your own 3DS, either way:
-  - Azahar: File > Set Up System Files, with the Artic Setup Tool running on your 3DS. The builder then finds them by itself.
-  - GodMode9: [1:] SYSNAND CTRNAND > title holds them in two folders, 0004009b (the font and the Mii parts) and 000400db (the word list).
-    Highlight 0004009b and press Y, open [0:] SDCARD, press Y again and choose Copy (not Move); then copy 000400db the same way, next to it.
-    In the builder, press "Folder" next to "3DS System Files" and choose that 0004009b folder. Copied this way the files are
-    encrypted, so the builder needs your 3DS keys (boot9.bin) to read them.
-  The builder also looks in Citra's user folder, and in Downloads, Desktop and Documents. It copies them once and keeps them for every game after.
+- Un PC de 64 bits con Windows 10 u 11. Mientras se compila un juego, la unidad C: necesita espacio libre equivalente a unas tres veces el tamaño del juego.
+- Un volcado de tu juego de 3DS: archivo .3ds, .cci, .cia, .cxi o .app, cifrado o descifrado. También puedes incluir su actualización y DLC.
+- Para volcados cifrados: los archivos boot9.bin y seeddb.bin de tu propia 3DS, extraídos con GodMode9. Colócalos en C:\Users\<you>\.3ds o selecciona su carpeta en Builder.
+  - boot9.bin: abre [M:] MEMORY VIRTUAL, selecciona boot9.bin y pulsa Y; después abre [0:] SDCARD, vuelve a pulsar Y y elige Copy.
+  - seeddb.bin: pulsa HOME, selecciona More... y luego Build support files. El archivo se guardará en gm9/out, en la tarjeta SD.
+  Cada fila de «Your Files» en Builder tiene un botón «Info» con estos pasos. También están disponibles en las preguntas y respuestas de la página Help.
+- El archivo otp.bin de tu Wii U, extraído de una copia de seguridad de la NAND de tu propia consola. El juego se empaqueta con él. Builder nunca muestra ni almacena la clave.
+- Una Wii U con Aroma, WUP Installer GX2 y su tarjeta SD.
+- Los archivos del sistema de tu 3DS: algunos archivos pequeños que cada 3DS conserva en su propia memoria, como la fuente del sistema que muchos juegos utilizan para mostrar texto, los componentes con los que se dibujan los personajes Mii y la lista de palabras prohibidas que los juegos consultan al escribir nombres. Los juegos los cargan desde la consola, por lo que no están en los volcados: los juegos que utilizan Miis se detienen si faltan sus datos, y Tomodachi Life lo hace si falta la lista de palabras. Puedes obtenerlos desde tu propia 3DS de cualquiera de estas maneras:
+  - Azahar: File > Set Up System Files, con Artic Setup Tool en ejecución en tu 3DS. Builder los encontrará automáticamente.
+  - GodMode9: en [1:] SYSNAND CTRNAND > title están las dos carpetas: 0004009b (fuente y datos Mii) y 000400db (lista de palabras). Selecciona 0004009b y pulsa Y; abre [0:] SDCARD, vuelve a pulsar Y y elige Copy (no Move). Después copia 000400db de la misma manera, junto a la anterior. En Builder, pulsa «Folder» junto a «3DS System Files» y selecciona la carpeta 0004009b. Al copiarlos de esta manera, los archivos quedan cifrados, por lo que Builder necesita las claves de tu 3DS (boot9.bin) para leerlos.
+  Builder también busca estos archivos en la carpeta de usuario de Citra y en Descargas, Escritorio y Documentos. Los copia una sola vez y los conserva para los juegos siguientes.
 
 
-GETTING STARTED
+PRIMEROS PASOS
 
-1. Unzip the whole "3Dii U Builder" folder to a short path such as C:\Games. Keep the engine folder next to the exe, and don't run it from inside the zip.
-   If Windows says a path is too long while unzipping, or the builder says files are missing, unzip it again into a shorter folder.
-2. Open "3Dii U Builder.exe". This beta isn't signed, so Windows may say it "protected your PC": click "More info", then "Run anyway".
-3. Click the big "+" tile (or press Ctrl+O) and choose your dump. The builder then asks about the game's update, DLC and mods.
-4. Under "Your Files", each light turns cyan once the builder has that file.
-5. Under "Put it on", choose your SD card or a folder, then press "Build It!".
-   Big games take a while: the game's code is recompiled for the Wii U and its shaders are compiled ahead of time.
-   The first build also compiles the builder's own runtime, so it takes a few minutes longer than the rest.
-6. Put the SD card in the Wii U and install the game with WUP Installer GX2.
-   If you installed an earlier build of the same game, delete it first (System Settings > Data Management), then install the new one. Deleting a game deletes its saves.
+1. Descomprime toda la carpeta «3Dii U Builder» en una ruta corta, por ejemplo C:\Games. Mantén la carpeta engine junto al archivo exe y no ejecutes el programa desde dentro del ZIP.
+   Si Windows indica que una ruta es demasiado larga al descomprimir, o Builder informa que faltan archivos, vuelve a extraerlo en una carpeta con una ruta más corta.
+2. Abre «3Dii U Builder.exe». Esta versión beta no está firmada, por lo que Windows podría indicar que «protegió tu PC»: pulsa «More info» y luego «Run anyway».
+3. Pulsa el recuadro grande con el símbolo «+» (o Ctrl+O) y selecciona tu volcado. Builder te preguntará por la actualización, el DLC y los mods del juego.
+4. En «Your Files», cada indicador se volverá cian cuando Builder disponga del archivo correspondiente.
+5. En «Put it on», selecciona tu tarjeta SD o una carpeta y pulsa «Build It!».
+   Los juegos grandes tardan más: el código del juego se recompila para Wii U y sus shaders se compilan por adelantado.
+   La primera compilación también compila el propio entorno de ejecución de Builder, por lo que tarda unos minutos más que las siguientes.
+6. Inserta la tarjeta SD en la Wii U e instala el juego con WUP Installer GX2.
+   Si ya habías instalado una versión anterior del mismo juego, elimínala primero (Configuración de la consola > Gestión de datos) y luego instala la nueva. Al eliminar un juego también se eliminan sus partidas guardadas.
 
 
-WHICH GAMES WORK
+COMPATIBILIDAD DE JUEGOS
 
-- "Complete on Wii U": finished. Confirmed on a real Wii U to run as the game should, with no known problems left:
+- «Complete on Wii U»: juego terminado. Se confirmó en una Wii U real que funciona como debería, sin problemas conocidos pendientes:
   New Super Mario Bros. 2.
-- "Plays on Wii U": tested on a real Wii U, and it plays; some things may still be rough:
+- «Plays on Wii U»: probado en una Wii U real y jugable, aunque algunos aspectos todavía pueden presentar problemas:
   Tomodachi Life, Paper Mario: Sticker Star, Mario & Luigi: Dream Team, Mario & Luigi: Paper Jam,
   Mario & Luigi: Superstar Saga + Bowser's Minions, Mario & Luigi: Bowser's Inside Story + Bowser Jr.'s Journey,
-  Professor Layton and the Azran Legacy, and Professor Layton and the Miracle Mask.
-  Either badge shows when your dump is the same edition that was tested. They were tested without updates.
-- "Runs in Cemu" (the Games page): built with this builder and played in the Cemu emulator, not yet on a real Wii U:
+  Professor Layton and the Azran Legacy y Professor Layton and the Miracle Mask.
+  Cualquiera de estas etiquetas se muestra cuando tu volcado corresponde a la misma edición que se probó. Estos juegos se probaron sin actualizaciones.
+- «Runs in Cemu» (página Games): compilados con Builder y ejecutados en el emulador Cemu, pero todavía no probados en una Wii U real:
   Mario Kart 7, The Legend of Zelda: A Link Between Worlds, Metroid: Samus Returns, Kirby: Triple Deluxe, Rhythm Heaven Megamix,
-  Phoenix Wright: Ace Attorney Trilogy, Animal Crossing: New Leaf, Kid Icarus: Uprising, Super Mario 3D Land and Miitopia.
-- "Untested": every other game, and any game with a mod. It may play, it may not start, or it may stop partway.
-  Reports on these games help the most.
+  Phoenix Wright: Ace Attorney Trilogy, Animal Crossing: New Leaf, Kid Icarus: Uprising, Super Mario 3D Land y Miitopia.
+- «Untested»: cualquier otro juego y todos los juegos con mods. Puede funcionar, no iniciar o detenerse a mitad de la ejecución.
+  Los informes sobre estos juegos son especialmente útiles.
 
 
-IF A GAME RUNS SLOWLY OR FREEZES ON THE WII U
+SI UN JUEGO FUNCIONA LENTAMENTE O SE CONGELA EN WII U
 
-- Turn off the SDCafiine and FTP (FTPiiU) plugins while you play: open Aroma's plugin menu (L + D-pad Down + Minus), switch both off, then
-  start the game again. Aroma comes with FTPiiU switched on. It works on the same processor cores as the game and holds it up: games have
-  slowed to a crawl and frozen with their sound looping until it was off. With SDCafiine on, a tester's New Super Mario Bros. 2 ran very
-  slowly everywhere.
-- The first time a game shows a new kind of scene it can stutter for a moment while the console makes that scene's shaders. It keeps them,
-  so the next time is smooth.
+- Desactiva los plugins SDCafiine y FTP (FTPiiU) mientras juegas: abre el menú de plugins de Aroma (L + cruceta Abajo + Menos), desactiva ambos y vuelve a iniciar el juego. Aroma incluye FTPiiU activado de forma predeterminada. Utiliza los mismos núcleos del procesador que el juego y puede ralentizarlo: algunos juegos llegaron a avanzar muy lentamente o congelarse con el sonido en bucle hasta que se desactivó. Con SDCafiine activado, un evaluador observó que New Super Mario Bros. 2 funcionaba muy lentamente en todas las zonas.
+- La primera vez que un juego muestra un tipo nuevo de escena, puede producirse una breve interrupción mientras la consola genera los shaders de esa escena. La consola los conserva, así que las siguientes veces se muestran con fluidez.
 
 
-UPDATES
+ACTUALIZACIONES
 
-- When it starts, the builder asks GitHub for the list of its releases; it only downloads the one you choose. If a newer one is out, the
-  Build page offers it; Help > Check for updates asks again at any time.
-- Press "Update" and the new version is downloaded into the builder's data folder, %LOCALAPPDATA%\3Dii U Builder\app. It opens from then
-  on: at once with "Restart now", or the next time you start the builder. The folder you unzipped is never changed.
-- If an update goes wrong: hold Shift while starting the builder to open the copy you unzipped, or delete the folder
-  %LOCALAPPDATA%\3Dii U Builder\app and the copy you unzipped runs again. A version that fails to start is set aside by itself, and
-  Help > Check for updates offers it again.
+- Al iniciarse, Builder consulta en GitHub la lista de versiones disponibles; solo descarga la que tú elijas. Si existe una versión más reciente, la página Build la ofrece. También puedes volver a comprobarlo en cualquier momento desde Help > Check for updates.
+- Pulsa «Update» y la nueva versión se descargará en la carpeta de datos de Builder: %LOCALAPPDATA%\3Dii U Builder\app. A partir de entonces se abrirá esa versión: inmediatamente si eliges «Restart now» o la próxima vez que inicies Builder. La carpeta que descomprimiste originalmente nunca se modifica.
+- Si una actualización falla: mantén pulsada la tecla Shift mientras inicias Builder para abrir la copia que descomprimiste, o elimina la carpeta %LOCALAPPDATA%\3Dii U Builder\app para volver a ejecutar la copia original. Una versión que no logra iniciarse se aparta automáticamente, y Help > Check for updates vuelve a ofrecerla.
 
 
-REPORTING A PROBLEM
+INFORMAR DE UN PROBLEMA
 
-- If a build fails, press "Details" and copy what it says.
-- Say which game it is (title and region), and whether you added an update, DLC or a mod.
-- For a game that goes wrong on the Wii U, say where in the game it happens and what you saw.
+- Si falla una compilación, pulsa «Details» y copia el contenido que aparece.
+- Indica qué juego es (título y región) y si agregaste una actualización, DLC o un mod.
+- Si el problema ocurre en Wii U, explica en qué parte del juego sucede y qué observaste.
 
 
-WHAT STAYS ON YOUR PC
+QUÉ SE CONSERVA EN TU PC
 
-- The builder works in %LOCALAPPDATA%\3Dii U Builder.
-  It keeps its compiled runtime there for the next game, plus up to 2 GB of each game's compiled code, so building a game again
-  (with its update, or with a newer builder) only compiles what changed. It deletes each game's other work files when the build ends.
-  Deleting that folder frees the space; the builder makes it again.
-- The games don't use the SD card: their saves, settings and the shaders your console makes for them stay on the console.
-- Your dumps are never changed. Your keys are only read.
-- The games you build are made from your dumps and your keys: don't share them.
+- Builder trabaja en %LOCALAPPDATA%\3Dii U Builder.
+  Allí conserva el entorno de ejecución compilado para el siguiente juego y hasta 2 GB del código compilado de cada juego. Así, si vuelves a compilar un juego (con su actualización o con una versión nueva de Builder), solo se recompila lo que haya cambiado. Los demás archivos de trabajo de cada juego se eliminan al finalizar la compilación.
+  Eliminar esa carpeta libera el espacio; Builder la volverá a crear cuando sea necesario.
+- Los juegos no utilizan la tarjeta SD para guardar datos: sus partidas, ajustes y los shaders que genera la consola permanecen en la propia Wii U.
+- Tus volcados nunca se modifican. Tus claves solo se leen.
+- Los juegos que compilas se crean a partir de tus volcados y tus claves: no los compartas.
 
-- When you pick a game, the builder downloads its cover art from GameTDB (art.gametdb.com) for the game's start-up screens and Wii U Menu icon.
-  It sends only the four letters of the game's product code. The "Art" pill on the game's tile lets you choose your own picture for the start-up screens, another for the Wii U Menu icon, or remove them to use the game's icon.
-  Its "GamePad bezel" line takes a picture the GamePad shows beside the screens, a bezel or overlay, in place of black: any picture, scaled to fill
-  the GamePad (854x480), its edges cut where its shape differs. "GamePad start screen" gives the GamePad a start-up picture of its own,
-  shown as it is (the TV's otherwise), and "This game's sound" a start-up sound for that game alone, in place of the one for all games.
-- With a SteamGridDB key (Help page, "Art and sound"; the key is free, on steamgriddb.com under Preferences, API) each game gets a banner for
-  its start-up screens and an icon for the Wii U Menu from SteamGridDB instead. The builder sends the game's name (and its names in other
-  regions, if SteamGridDB doesn't know this one) and your key there, and nothing else; the key stays in the builder's settings on this PC.
-- A start-up sound is yours to add (Help page, "Art and sound"): choose a WAV file and every game you build plays it while it starts.
-- The builder asks GitHub for the list of its releases, and downloads one from there only when you press "Update".
+- Al seleccionar un juego, Builder descarga su portada desde GameTDB (art.gametdb.com) para las pantallas de inicio y el icono del menú de Wii U.
+  Solo envía las cuatro letras del código de producto del juego. La etiqueta «Art» del recuadro permite elegir una imagen propia para las pantallas de inicio, otra para el icono del menú de Wii U o quitarlas para utilizar el icono del propio juego.
+  La opción «GamePad bezel» permite elegir una imagen que el GamePad muestra junto a las pantallas, como marco u overlay, en lugar del fondo negro. Puede ser cualquier imagen: se ajusta para cubrir el GamePad (854x480) y se recortan los bordes cuando su proporción no coincide. «GamePad start screen» asigna una imagen de inicio exclusiva para el GamePad, que se muestra tal cual (la pantalla del televisor conserva la suya), y «This game's sound» asigna un sonido de inicio exclusivo para ese juego, en lugar del sonido general.
+- Con una clave de SteamGridDB (página Help, sección «Art and sound»; la clave es gratuita y se obtiene en steamgriddb.com, en Preferences > API), cada juego obtiene de SteamGridDB un banner para las pantallas de inicio y un icono para el menú de Wii U. Builder envía el nombre del juego (y sus nombres en otras regiones si SteamGridDB no reconoce esta edición) y tu clave; no envía nada más. La clave permanece en los ajustes de Builder en este PC.
+- Puedes agregar tu propio sonido de inicio desde Help > «Art and sound»: selecciona un archivo WAV y todos los juegos que compiles lo reproducirán al iniciar.
+- Builder consulta en GitHub la lista de versiones disponibles y solo descarga una cuando pulsas «Update».
 
-The builder comes with no game, no game data and no keys. This is a beta, with no warranty.
-Third-party notices.txt lists the open-source software it carries.
+Builder no incluye juegos, datos de juegos ni claves. Esta es una versión beta y se proporciona sin garantía.
+El archivo Third-party notices.txt enumera el software de código abierto que incluye.
