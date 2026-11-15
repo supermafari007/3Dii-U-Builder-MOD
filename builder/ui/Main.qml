@@ -466,7 +466,7 @@ ApplicationWindow {
                 Rectangle { anchors.centerIn: parent; width: 12; height: 60; radius: 3; color: pal.keycapGlyph }
             }
             Label { anchors.horizontalCenter: parent.horizontalCenter; y: 136; text: "Compilar"; color: pal.railText; font.pixelSize: 30 }
-            Hit { anchors.margins: 10; name: "Build page"; role: Accessible.PageTab; checked: win.page === "build"; onActivated: win.page = "build" }
+            Hit { anchors.margins: 10; name: "Página Compilar"; role: Accessible.PageTab; checked: win.page === "build"; onActivated: win.page = "build" }
         }
         Item {
             y: 360; width: 190; height: 182
@@ -475,7 +475,7 @@ ApplicationWindow {
                 KeyCap { x: 42 + (index % 2) * 53; y: 22 + Math.floor(index / 2) * 53; width: 47; height: 52; inset: 5 }
             }
             Label { anchors.horizontalCenter: parent.horizontalCenter; y: 136; text: "Juegos"; color: pal.railText; font.pixelSize: 30 }
-            Hit { anchors.margins: 10; name: "Games page"; role: Accessible.PageTab; checked: win.page === "games"; onActivated: win.page = "games" }
+            Hit { anchors.margins: 10; name: "Página Juegos"; role: Accessible.PageTab; checked: win.page === "games"; onActivated: win.page = "games" }
         }
         Item {
             y: 542; width: 190; height: 178
@@ -488,7 +488,7 @@ ApplicationWindow {
                 }
             }
             Label { anchors.horizontalCenter: parent.horizontalCenter; y: 140; text: "Ayuda"; color: pal.helpText; font.pixelSize: 30; font.weight: Font.DemiBold }
-            Hit { anchors.margins: 10; name: "Help page"; role: Accessible.PageTab; checked: win.page === "help"; onActivated: win.page = "help" }
+            Hit { anchors.margins: 10; name: "Página Ayuda"; role: Accessible.PageTab; checked: win.page === "help"; onActivated: win.page = "help" }
         }
 
         // ---- the title row: 3DiiU Builder, a 3DS, dots, a GamePad
@@ -700,7 +700,7 @@ ApplicationWindow {
                                 spacing: 8
                                 Pill { text: "Más tarde"; accessibleName: "Actualizar más tarde"; visible: updateCard.st !== "downloading"; onClicked: app.laterUpdate() }
                                 Pill { text: "Cancelar"; accessibleName: "Cancelar la descarga"; tone: "red"; visible: updateCard.st === "downloading"; onClicked: app.cancelUpdate() }
-                                Pill { text: "Update"; accessibleName: "Descargar la actualización"; tone: "cyan"; visible: updateCard.st === "available"; onClicked: app.startUpdate() }
+                                Pill { text: "Actualizar"; accessibleName: "Descargar la actualización"; tone: "cyan"; visible: updateCard.st === "available"; onClicked: app.startUpdate() }
                                 Pill { text: "Reiniciar ahora"; accessibleName: "Reiniciar con la nueva versión"; tone: "cyan"; visible: updateCard.st === "ready"; enabled: !app.building; onClicked: app.restartForUpdate() }
                                 Pill { text: "Volver a intentar"; accessibleName: "Volver a intentar la actualización"; tone: "cyan"; visible: updateCard.st === "failed"; onClicked: app.startUpdate() }
                             }
@@ -725,7 +725,7 @@ ApplicationWindow {
                         CardRow {
                             label: "Mod"; sub: app.hasMod ? app.modText : "Ninguno seleccionado."; light: app.hasMod ? "cyan" : "red"
                             Pill { text: ".zip"; onClicked: app.hasGame ? app.chooseMod("zip") : app.chooseGame() }
-                            Pill { text: "Folder"; tone: "cyan"; onClicked: app.hasGame ? app.chooseMod("folder") : app.chooseGame() }
+                            Pill { text: "Carpeta"; tone: "cyan"; onClicked: app.hasGame ? app.chooseMod("folder") : app.chooseGame() }
                             Pill { text: "Quitar"; tone: "red"; onClicked: app.removeExtra("mod") }
                         }
                         CardRow {
@@ -743,17 +743,17 @@ ApplicationWindow {
                         CardRow {
                             label: "Claves de 3DS"; sub: app.keysText; light: app.keysOk ? "cyan" : app.keysNeeded ? "red" : "grey"
                             Pill { text: "Info"; onClicked: app.explain("keys") }
-                            Pill { text: "Folder"; tone: "cyan"; onClicked: app.chooseKeys() }
+                            Pill { text: "Carpeta"; tone: "cyan"; onClicked: app.chooseKeys() }
                         }
                         CardRow {
                             label: "otp.bin de Wii U"; sub: app.otpText; light: app.otpOk ? "cyan" : "red"
                             Pill { text: "Info"; onClicked: app.explain("otp") }
-                            Pill { text: "File"; tone: "cyan"; onClicked: app.chooseOtp() }
+                            Pill { text: "Archivo"; tone: "cyan"; onClicked: app.chooseOtp() }
                         }
                         CardRow {
                             label: "Archivos del sistema de 3DS"; sub: app.sysText; light: app.sysOk ? "cyan" : "red"
                             Pill { text: "Info"; onClicked: app.explain("system") }
-                            Pill { text: "Folder"; tone: "cyan"; onClicked: app.chooseSystem() }
+                            Pill { text: "Carpeta"; tone: "cyan"; onClicked: app.chooseSystem() }
                         }
                     }
 
@@ -773,7 +773,7 @@ ApplicationWindow {
                             label: "Carpeta"; sub: app.target === "folder" ? app.destText : "Selecciona para guardarlo en una carpeta."
                             light: app.target === "folder" ? "cyan" : "grey"
                             tappable: true; role: Accessible.RadioButton; checked: app.target === "folder"; onTapped: app.setTarget("folder")
-                            Pill { text: "Folder"; tone: "cyan"; onClicked: app.chooseFolder() }
+                            Pill { text: "Carpeta"; tone: "cyan"; onClicked: app.chooseFolder() }
                         }
                     }
 
@@ -963,8 +963,8 @@ ApplicationWindow {
                         label: "Pantallas de inicio"
                         sub: app.artStyle === "console" ? "Como la Consola Virtual de Wii U presenta un juego: imagen, nombre y año de lanzamiento antes de mostrar una ilustración de 3DS."
                                                         : "Solo la imagen del juego, ocupando toda la pantalla."
-                        Pill { text: "Arte"; accessibleName: "Art on its own"; tone: app.artStyle === "picture" ? "cyan" : "grey"; onClicked: app.setArtStyle("picture") }
-                        Pill { text: "Consola virtual"; accessibleName: "As the Virtual Console shows a game"; tone: app.artStyle === "console" ? "cyan" : "grey"; onClicked: app.setArtStyle("console") }
+                        Pill { text: "Arte"; accessibleName: "Solo la imagen"; tone: app.artStyle === "picture" ? "cyan" : "grey"; onClicked: app.setArtStyle("picture") }
+                        Pill { text: "Consola virtual"; accessibleName: "Como la Consola Virtual presenta un juego"; tone: app.artStyle === "console" ? "cyan" : "grey"; onClicked: app.setArtStyle("console") }
                     }
                     CardRow {
                         label: "Sonido de inicio"
@@ -978,7 +978,7 @@ ApplicationWindow {
                     title: "Acerca de"
                     subtitle: "3Dii U Builder " + app.version
                     CardRow {
-                        label: "Version " + app.version; sub: "Gratuito y de código abierto: licencias y software incluido."
+                        label: "Versión " + app.version; sub: "Gratuito y de código abierto: licencias y software incluido."
                         Pill { text: "Acerca del proyecto y sus licencias"; onClicked: app.about() }
                     }
                     CardRow {
