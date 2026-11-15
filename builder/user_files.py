@@ -26,7 +26,7 @@ def check_otp(path):
     with open(path, 'rb') as f:
         slot = f.read()[OTP_COMMON_KEY]
     if slot in (bytes(16), b'\xff' * 16):
-        return 'That otp.bin has an empty common-key slot: dump it again from your own Wii U.'
+        return 'El espacio de la clave común de otp.bin está vacío: vuelve a extraerlo de tu propia Wii U.'
     return None
 
 
@@ -34,7 +34,7 @@ def check_boot9(path):
     """None for a usable 3DS boot ROM dump, otherwise what's wrong with it"""
     size = _size(path)
     if size is None:
-        return 'boot9.bin is missing. It comes from your own 3DS.'
+        return 'Falta boot9.bin. Se obtiene de tu propia 3DS.'
     if size not in BOOT9_SIZES:
         return 'That boot9.bin isn\'t a 3DS boot ROM dump: it should be 64 KB (or 32 KB, its protected half).'
     return None
