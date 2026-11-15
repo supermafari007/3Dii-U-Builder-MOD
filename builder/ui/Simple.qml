@@ -231,7 +231,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     visible: app.target === "card"
                     spacing: 6
-                    Label { text: "SD card:" }
+                    Label { text: "Tarjeta SD:" }
                     ComboBox {
                         id: cardBox
                         Layout.fillWidth: true
@@ -241,9 +241,9 @@ ApplicationWindow {
                         displayText: app.cards.length ? (app.destText || "Choose an SD card") : "No SD card found"
                         onActivated: (i) => app.pickCard(app.cards[i].path)
                     }
-                    Button { text: "Look again"; enabled: !win.busy; onClicked: app.refreshCards() }
+                    Button { text: "Volver a buscar"; enabled: !win.busy; onClicked: app.refreshCards() }
                 }
-                PathRow { visible: app.target === "folder"; label: "Folder..."; text: app.destText; onChoose: app.chooseFolder() }
+                PathRow { visible: app.target === "folder"; label: "Carpeta..."; text: app.destText; onChoose: app.chooseFolder() }
                 RowLayout {
                     spacing: 6
                     Button {
@@ -254,8 +254,8 @@ ApplicationWindow {
                         onClicked: app.hasGame ? app.build() : app.chooseGame()
                     }
                     Button { text: "Cancelar"; visible: app.view === "building"; enabled: app.building; onClicked: app.cancel() }
-                    Button { text: "Back"; visible: app.view === "failed" || app.view === "done"; onClicked: app.back() }
-                    Button { text: "Open the folder"; visible: app.view === "done" && app.target === "folder"; onClicked: app.openFolder() }
+                    Button { text: "Volver"; visible: app.view === "failed" || app.view === "done"; onClicked: app.back() }
+                    Button { text: "Abrir carpeta"; visible: app.view === "done" && app.target === "folder"; onClicked: app.openFolder() }
                     Label {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
