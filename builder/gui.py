@@ -399,7 +399,7 @@ class App(QObject):
         try:
             return dumps.Dump(path)
         except Exception as e:  # a truncated or foreign file can fail anywhere in its headers
-            self.tell('No se puede leer el archivo', f'{os.path.basename(path)}: {e if isinstance(e, (dumps.DumpError, OSError)) else "not a 3DS dump this can read"}',
+            self.tell('No se puede leer el archivo', f'{os.path.basename(path)}: {e if isinstance(e, (dumps.DumpError, OSError)) else "no es un volcado de 3DS compatible"}',
                       'error')
             return None
 
@@ -720,8 +720,8 @@ class App(QObject):
         self.refresh_library()
 
     def key_refused(self):
-        self.tell("SteamGridDB didn't take the key", 'Check it on the Help page, under Art and sound: it is the long code on steamgriddb.com under '
-                  'Preferences, API. Until then the art comes from GameTDB.', 'warn')
+        self.tell("SteamGridDB rechazó la clave", 'Comprueba la clave en la página Ayuda, en Imagen y sonido: es el código largo de steamgriddb.com, en '
+                  'Preferences > API. Hasta entonces, las imágenes se obtendrán de GameTDB.', 'warn')
 
     def set_art(self, path, icon=None, remember=True, removed=False):
         """the pictures this game's start-up screens and Wii U Menu icon are made from, remembered for the game: path for both, or for the
@@ -748,7 +748,7 @@ class App(QObject):
     @Slot()
     def setArtKey(self):
         key, ok = QInputDialog.getText(None, 'SteamGridDB', 'Tu clave API de SteamGridDB: el código largo que aparece en steamgriddb.com, en Preferences > API.\n'
-                                       "It stays on this PC, in the builder's settings. Leave it empty to stop asking SteamGridDB.")
+                                       "La clave permanece en este PC, en los ajustes de Builder. Déjala vacía para dejar de consultar SteamGridDB.")
         if not ok:
             return
         self.st['sgdb_key'] = key.strip()
@@ -762,7 +762,7 @@ class App(QObject):
 
     def ask_sound(self, title, to):
         """a sound the player picks, made into a start-up sound at to (tools/make_boot_sound.py); False if none, or after saying why not"""
-        path = QFileDialog.getOpenFileName(None, title, self.st.get('sound_folder', ''), 'Sounds (*.wav *.btsnd);;All files (*.*)')[0]
+        path = QFileDialog.getOpenFileName(None, title, self.st.get('sound_folder', ''), 'Sonidos (*.wav *.btsnd);;Todos los archivos (*.*)')[0]
         if not path:
             return False
         self.st['sound_folder'] = os.path.dirname(path)
@@ -773,13 +773,13 @@ class App(QObject):
             with open(to, 'wb') as f:
                 f.write(data)
         except (OSError, ValueError, EOFError, ImportError) as e:
-            self.tell("That sound can't be used", f'{e}. Choose a WAV file: most sound programs can save one.', 'error')
+            self.tell("No se puede utilizar ese sonido", f'{e}. Selecciona un archivo WAV: la mayoría de los programas de audio pueden guardarlo en ese formato.', 'error')
             return False
         return True
 
     @Slot()
     def chooseSound(self):
-        if self.ask_sound('A sound to play while your games start', BOOT_SOUND):
+        if self.ask_sound('Sonido para reproducir al iniciar tus juegos', BOOT_SOUND):
             self.set(soundSet=True)
 
     @Slot()
@@ -788,7 +788,7 @@ class App(QObject):
             if os.path.isfile(BOOT_SOUND):
                 os.remove(BOOT_SOUND)
         except OSError as e:
-            self.tell("The sound couldn't be removed", str(e), 'error')
+            self.tell("No se pudo quitar el sonido", str(e), 'error')
         self.set(soundSet=os.path.isfile(BOOT_SOUND))
 
     @Slot(str)
@@ -798,11 +798,11 @@ class App(QObject):
     def set_extra(self, kind, d, what=''):
         setattr(self, kind, d)
         if kind == 'mod':
-            self.set(modText=f'{what}  ·  {os.path.basename(d)}' if d else 'None', hasMod=d is not None)
+            self.set(modText=f'{what}  ·  {os.path.basename(d)}' if d else 'Ninguno', hasMod=d is not None)
             if self.game:
                 self.refresh_note()
             return
-        text = f'{describe(d)}  ·  {os.path.basename(d.path)}' if d else 'None'  # the window cuts it to fit
+        text = f'{describe(d)}  ·  {os.path.basename(d.path)}' if d else 'Ninguno'  # the window cuts it to fit
         if kind == 'update':
             self.set(updateText=text, hasUpdate=d is not None)
             if self.game:
