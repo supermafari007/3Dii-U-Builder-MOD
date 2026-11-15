@@ -1,101 +1,83 @@
-# Third-party licences
+# Licencias de terceros
 
-3Dii U is licensed under the [European Union Public Licence v1.2](LICENSE) (EUPL-1.2). This file lists everything in
-this repository and in the 3Dii U Builder app that comes from somewhere else: who made it, its licence, where its
-source is, and how 3Dii U uses it. The full text of every licence follows the list.
+3Dii U está licenciado bajo la [Licencia Pública de la Unión Europea v1.2](LICENSE) (EUPL-1.2). Este archivo enumera todos los componentes de este repositorio y de la aplicación 3Dii U Builder que proceden de otros proyectos: quién los creó, su licencia, dónde se encuentra su código fuente y cómo los utiliza 3Dii U. Después de esta lista se incluye el texto completo de cada licencia.
 
-3Dii U is free and open-source. There are no paid builds, no paid beta tiers and no paywalled features.
+3Dii U es gratuito y de código abierto. No existen compilaciones de pago, niveles beta de pago ni funciones bloqueadas tras un pago.
 
-How each part reaches you decides what its licence asks of whoever distributes it:
+La forma en que cada componente llega hasta ti determina las obligaciones que su licencia impone a quien lo distribuye:
 
-- **In the repository**: source code checked in here.
-- **In the app**: files the standalone 3Dii U Builder (`make_app.py`) ships beside its own code.
-- **In the games**: libraries linked into every Wii U title the builder makes on your PC. The builder never
-  distributes games; you build them from your own dumps for your own console.
-- **Build tool**: a program the build runs; nothing of it ends up in a game except where noted.
+- **En el repositorio**: código fuente incluido y versionado aquí.
+- **En la aplicación**: archivos que la aplicación independiente 3Dii U Builder (`make_app.py`) distribuye junto a su propio código.
+- **En los juegos**: bibliotecas enlazadas en cada título de Wii U que Builder genera en tu PC. Builder nunca distribuye juegos; tú los compilas desde tus propios volcados para tu propia consola.
+- **Herramienta de compilación**: programa que ejecuta el proceso de compilación; nada de él termina dentro de un juego, salvo que se indique expresamente.
 
-## Summary
+## Resumen
 
-| Component | Version | Authors | Licence | Copyleft | How it's used |
+| Componente | Versión | Autores | Licencia | Copyleft | Uso |
 |---|---|---|---|---|---|
-| [3dsrecomp](https://github.com/nathsou/3dsrecomp) | upstream `8737b72` + this project's changes | Nathan Soufflet (nathsou) | EUPL-1.2 | yes (EUPL) | repository (`third_party/3dsrecomp`), app, games |
-| [devkitPPC](https://devkitpro.org/): GCC | 16.2.0 (devkitPPC build) | Free Software Foundation, Inc. and the GCC contributors; packaged by devkitPro | GPL-3.0-or-later; libgcc and libstdc++ under GPL-3.0 with the GCC Runtime Library Exception 3.1 | yes (tool only) | app (build tool); its runtime libraries in the games under the exception |
-| devkitPPC: GNU Binutils | 2.47 | Free Software Foundation, Inc. and contributors | GPL-3.0-or-later | yes (tool only) | app (build tool) |
-| devkitPPC: newlib | 4.6.0.20260123 | Red Hat, Inc. and the newlib contributors | BSD-style and other permissive licences ([COPYING.NEWLIB](https://sourceware.org/git/?p=newlib-cygwin.git;a=blob;f=COPYING.NEWLIB)) | no | app; games |
-| [wut](https://github.com/devkitPro/wut) | 1.9.2 | devkitPro, wut Authors | Zlib | no | app; games; Wii U headers for `port/wiiu` |
-| [wut-tools](https://github.com/devkitPro/wut-tools) (`elf2rpl`) | 1.3.5 | devkitPro | GPL-2.0-or-later | yes (tool only) | app (build tool) |
-| [CafeGLSL](https://github.com/Exzap/CafeGLSL) | 1.0.0-rc1 | Exzap; built on Mesa | MIT for CafeGLSL's additions; Mesa's licences (mostly MIT) for Mesa's code | no | app (shader compiler); games (its PowerPC library); `tools/win/cafeglsl_windows.patch` is this project's change to it |
-| [MinGW-w64](https://www.mingw-w64.org/) winpthreads | as shipped with the CafeGLSL Windows build | mingw-w64 project | MIT and BSD-style | no | app (`libwinpthread-1.dll`) |
-| [zlib](https://zlib.net/) | as shipped with the CafeGLSL Windows build | Jean-loup Gailly and Mark Adler | Zlib | no | app (`zlib1.dll`) |
-| [FFmpeg](https://ffmpeg.org/) libavcodec, libavutil (AAC decoder only) | 4.4 | the FFmpeg developers | LGPL-2.1-or-later (built without `--enable-gpl`, by `tools/aac_build.sh`) | yes (weak) | app (`engine/toolchain/aac_ppc`); games with AAC music |
-| [makerom](https://github.com/3DSGuy/Project_CTR) (Project_CTR) | 0.19.0 | 3DSGuy, applestash, Jakcron | MIT; contains Mbed TLS (Apache-2.0) and libyaml (MIT) | no | app (`bin/makerom.exe`, downloaded, not in git) |
-| [pyctr](https://github.com/ihaveamac/pyctr) | 0.7.6 | Ian Burgwin (ihaveamac) | MIT | no | app; builder source |
-| [PyCryptodome / PyCryptodomex](https://www.pycryptodome.org/) | 4.3.0 / 3.24.1 | Helder Eijs (Legrandin) and contributors | BSD-2-Clause and public domain | no | app |
-| [cryptography](https://cryptography.io/) | 50.0.2 | the cryptography contributors (PyCA) | Apache-2.0 OR BSD-3-Clause | no | app (the WUP packer, `phase0/tools/pack_wup.py`, encrypts with it) |
-| [cffi](https://cffi.readthedocs.io/) | 2.1.1 | Armin Rigo, Maciej Fijalkowski and contributors | MIT | no | app |
-| [OpenSSL](https://www.openssl.org/) | 3.x, as shipped with Python and cryptography | The OpenSSL Project Authors | Apache-2.0 | no | app (`libcrypto-3*.dll`, `libssl-3*.dll`) |
-| [Python](https://www.python.org/) and its standard library | 3.14.8 | Python Software Foundation and contributors | PSF-2.0 (with the licences of the software Python incorporates: libffi, expat, bzip2, xz, zstd and others, [listed here](https://docs.python.org/3/license.html)) | no | app (the bundled interpreter) |
-| [setuptools](https://github.com/pypa/setuptools) | 84.0.0 | the Python Packaging Authority | MIT | no | app (pulled in by the bundler) |
-| [Qt](https://www.qt.io/) | 6.12.0 | The Qt Company Ltd. and other contributors | LGPL-3.0-only (the Qt modules the app uses) | yes (weak) | app, as separate, replaceable DLLs |
-| [PySide6 / Shiboken6](https://wiki.qt.io/Qt_for_Python) | 6.12.0 | The Qt Company Ltd. | LGPL-3.0-only | yes (weak) | app, as separate, replaceable files; builder source |
-| [PyInstaller](https://pyinstaller.org/) bootloader | 6.22.3 | PyInstaller Development Team; Giovanni Bajo; McMillan Enterprises, Inc. | GPL-2.0-or-later with the PyInstaller Bootloader Exception; run-time hooks Apache-2.0 | no (the exception covers bundling) | app (`3Dii U Builder.exe`) |
-| Microsoft Visual C++ and Universal C runtimes | as shipped with Python | Microsoft Corporation | Microsoft's redistribution terms for these runtime files | no | app (`VCRUNTIME140*.dll`, `ucrtbase.dll`, `api-ms-win-*.dll`) |
-| [woomïnstaller](https://github.com/shinyquagsire23/woominstaller)'s boot movie | as in its repository | shinyquagsire23 (Max Thomas) | LGPL-2.1 | yes (weak) | repository (`phase0/title*/meta/bootMovie.h264`); copied into every game's title |
+| [3dsrecomp](https://github.com/nathsou/3dsrecomp) | upstream `8737b72` + cambios de este proyecto | Nathan Soufflet (nathsou) | EUPL-1.2 | Sí (EUPL) | repositorio (`third_party/3dsrecomp`), aplicación y juegos |
+| [devkitPPC](https://devkitpro.org/): GCC | 16.2.0 (compilación devkitPPC) | Free Software Foundation, Inc. y colaboradores de GCC; empaquetado por devkitPro | GPL-3.0-or-later; libgcc y libstdc++ bajo GPL-3.0 con GCC Runtime Library Exception 3.1 | Sí (solo herramienta) | aplicación (herramienta); bibliotecas de ejecución en los juegos bajo la excepción |
+| devkitPPC: GNU Binutils | 2.47 | Free Software Foundation, Inc. y colaboradores | GPL-3.0-or-later | Sí (solo herramienta) | aplicación (herramienta de compilación) |
+| devkitPPC: newlib | 4.6.0.20260123 | Red Hat, Inc. y colaboradores de newlib | BSD y otras licencias permisivas ([COPYING.NEWLIB](https://sourceware.org/git/?p=newlib-cygwin.git;a=blob;f=COPYING.NEWLIB)) | No | aplicación y juegos |
+| [wut](https://github.com/devkitPro/wut) | 1.9.2 | devkitPro y autores de wut | Zlib | No | aplicación, juegos y encabezados de Wii U para `port/wiiu` |
+| [wut-tools](https://github.com/devkitPro/wut-tools) (`elf2rpl`) | 1.3.5 | devkitPro | GPL-2.0-or-later | Sí (solo herramienta) | aplicación (herramienta de compilación) |
+| [CafeGLSL](https://github.com/Exzap/CafeGLSL) | 1.0.0-rc1 | Exzap; basado en Mesa | MIT para los aportes de CafeGLSL; licencias de Mesa (principalmente MIT) para su código | No | aplicación (compilador de shaders) y juegos (biblioteca PowerPC); `tools/win/cafeglsl_windows.patch` es un cambio de este proyecto |
+| [MinGW-w64](https://www.mingw-w64.org/) winpthreads | Incluido con la compilación de CafeGLSL para Windows | Proyecto mingw-w64 | MIT y BSD | No | aplicación (`libwinpthread-1.dll`) |
+| [zlib](https://zlib.net/) | Incluida con la compilación de CafeGLSL para Windows | Jean-loup Gailly y Mark Adler | Zlib | No | aplicación (`zlib1.dll`) |
+| [FFmpeg](https://ffmpeg.org/) libavcodec, libavutil (solo decodificador AAC) | 4.4 | Desarrolladores de FFmpeg | LGPL-2.1-or-later (compilado sin `--enable-gpl`, mediante `tools/aac_build.sh`) | Sí (débil) | aplicación (`engine/toolchain/aac_ppc`) y juegos con música AAC |
+| [makerom](https://github.com/3DSGuy/Project_CTR) (Project_CTR) | 0.19.0 | 3DSGuy, applestash y Jakcron | MIT; incluye Mbed TLS (Apache-2.0) y libyaml (MIT) | No | aplicación (`bin/makerom.exe`, descargado y no versionado en Git) |
+| [pyctr](https://github.com/ihaveamac/pyctr) | 0.7.6 | Ian Burgwin (ihaveamac) | MIT | No | aplicación y código fuente de Builder |
+| [PyCryptodome / PyCryptodomex](https://www.pycryptodome.org/) | 4.3.0 / 3.24.1 | Helder Eijs (Legrandin) y colaboradores | BSD-2-Clause y dominio público | No | aplicación |
+| [cryptography](https://cryptography.io/) | 50.0.2 | Colaboradores de cryptography (PyCA) | Apache-2.0 O BSD-3-Clause | No | aplicación (el empaquetador WUP, `phase0/tools/pack_wup.py`, lo utiliza para cifrar) |
+| [cffi](https://cffi.readthedocs.io/) | 2.1.1 | Armin Rigo, Maciej Fijalkowski y colaboradores | MIT | No | aplicación |
+| [OpenSSL](https://www.openssl.org/) | 3.x, incluido con Python y cryptography | Autores del proyecto OpenSSL | Apache-2.0 | No | aplicación (`libcrypto-3*.dll`, `libssl-3*.dll`) |
+| [Python](https://www.python.org/) y su biblioteca estándar | 3.14.8 | Python Software Foundation y colaboradores | PSF-2.0 (junto con las licencias del software incorporado por Python: libffi, expat, bzip2, xz, zstd y otros, [enumerados aquí](https://docs.python.org/3/license.html)) | No | aplicación (intérprete incluido) |
+| [setuptools](https://github.com/pypa/setuptools) | 84.0.0 | Python Packaging Authority | MIT | No | aplicación (incorporado por el empaquetador) |
+| [Qt](https://www.qt.io/) | 6.12.0 | The Qt Company Ltd. y otros colaboradores | LGPL-3.0-only (módulos Qt utilizados por la aplicación) | Sí (débil) | aplicación, como DLL independientes y reemplazables |
+| [PySide6 / Shiboken6](https://wiki.qt.io/Qt_for_Python) | 6.12.0 | The Qt Company Ltd. | LGPL-3.0-only | Sí (débil) | aplicación, como archivos independientes y reemplazables; código fuente de Builder |
+| Cargador de arranque de [PyInstaller](https://pyinstaller.org/) | 6.22.3 | PyInstaller Development Team; Giovanni Bajo; McMillan Enterprises, Inc. | GPL-2.0-or-later con la excepción de PyInstaller Bootloader; hooks de ejecución Apache-2.0 | No (la excepción cubre el empaquetado) | aplicación (`3Dii U Builder.exe`) |
+| Runtimes Microsoft Visual C++ y Universal C | Incluidos con Python | Microsoft Corporation | Términos de redistribución de Microsoft para estos archivos de runtime | No | aplicación (`VCRUNTIME140*.dll`, `ucrtbase.dll`, `api-ms-win-*.dll`) |
+| Película de arranque de [woomïnstaller](https://github.com/shinyquagsire23/woominstaller) | La versión del repositorio | shinyquagsire23 (Max Thomas) | LGPL-2.1 | Sí (débil) | repositorio (`phase0/title*/meta/bootMovie.h264`); se copia en el título de cada juego |
 
-### Also in the app, unused by the build
+### También se incluye en la aplicación, aunque la compilación no lo utiliza
 
-The app copies devkitPro's whole install folder (`engine/devkitpro`). The build only uses devkitPPC, wut and
-wut-tools' `elf2rpl`, but these packages ride along. Each one's licence text ships inside that folder (in `licenses/`,
-`portlibs/*/licenses/` and `libogc2/*_license.txt`). Trimming them from the app would drop these obligations.
+La aplicación copia toda la carpeta de instalación de devkitPro (`engine/devkitpro`). La compilación solo utiliza devkitPPC, wut y `elf2rpl` de wut-tools, pero estos paquetes también se incluyen. El texto de licencia de cada uno se distribuye dentro de esa carpeta (en `licenses/`, `portlibs/*/licenses/` y `libogc2/*_license.txt`). Eliminarlos de la aplicación supondría incumplir esas obligaciones.
 
-| Package | Version | Licence |
+| Paquete | Versión | Licencia |
 |---|---|---|
 | general-tools | 1.4.4 | GPL-3.0 |
 | gamecube-tools | 1.0.7 | GPL-3.0 |
-| libogc2, libfat, RTEMS parts | git r2497, r273 | Zlib (libogc2); BSD-style (libfat, RTEMS) |
+| libogc2, libfat, componentes RTEMS | git r2497, r273 | Zlib (libogc2); BSD (libfat, RTEMS) |
 | libsmb2 (libogc2) | 6.3.2 | LGPL-2.1 |
 | SDL2, SDL2_mixer (Wii U) | 2.32.10, 2.6.3 | Zlib |
-| FreeType (ppc) | 2.15.0 | FreeType License or GPL-2.0 |
+| FreeType (ppc) | 2.15.0 | FreeType License o GPL-2.0 |
 | mpg123 (ppc) | 1.33.4 | LGPL-2.1 |
-| Mini-XML (ppc) | 3.3.1 | Apache-2.0 with exceptions |
-| libpng, zlib, bzip2, brotli, libogg, libvorbis/libvorbisidec, libmodplug (ppc) | as packaged by devkitPro | libpng, Zlib, bzip2, MIT, BSD-3-Clause, BSD-3-Clause, public domain |
+| Mini-XML (ppc) | 3.3.1 | Apache-2.0 con excepciones |
+| libpng, zlib, bzip2, brotli, libogg, libvorbis/libvorbisidec, libmodplug (ppc) | Según el paquete de devkitPro | libpng, Zlib, bzip2, MIT, BSD-3-Clause, BSD-3-Clause, dominio público |
 | pkg-config | 0.28 | GPL-2.0 |
-| devkitPPC rules, crtls, CMake files | as packaged by devkitPro | devkitPro's terms, in each package |
+| Reglas devkitPPC, crtls y archivos CMake | Según el paquete de devkitPro | Términos de devkitPro incluidos en cada paquete |
 
-### Referenced, not used
+### Referenciados, pero no utilizados
 
-None of these projects' code is in 3Dii U:
+El código de ninguno de estos proyectos forma parte de 3Dii U:
 
-- **[NUSPacker](https://github.com/Maschell/NUSPacker)** by Maschell (GPL-3.0). The WUP layout `phase0/tools/pack_wup.py`
-  writes was learned from it.
-- **[Citra](https://github.com/citra-emu/citra)** and **[Azahar](https://github.com/azahar-emu/azahar)** (GPL-2.0-or-later).
-  Comments in `third_party/3dsrecomp` compare behaviour with theirs. The builder can read *your own* 3DS system files
-  from their user folders.
-- **[3dbrew](https://www.3dbrew.org/)** and **[WiiUBrew](https://wiiubrew.org/)**: hardware and system documentation.
-- **shinyquagsire23's homebrew titles**: the field layout of `app.xml`, `cos.xml` and `meta.xml`.
-- **[Cemu](https://github.com/cemu-project/Cemu)** (MPL-2.0): developers test builds in it. It isn't shipped.
-- **fearkov's [3dsrecomp](https://github.com/fearkov/3dsrecomp)** and **[Zakuro](https://github.com/fearkov/zakuro)**
-  are separate projects. 3Dii U's `third_party/3dsrecomp` is nathsou's (its history is in nathsou's repository), and
-  Zakuro isn't used.
+- **[NUSPacker](https://github.com/Maschell/NUSPacker)**, de Maschell (GPL-3.0). La estructura WUP que genera `phase0/tools/pack_wup.py` se estudió a partir de este proyecto.
+- **[Citra](https://github.com/citra-emu/citra)** y **[Azahar](https://github.com/azahar-emu/azahar)** (GPL-2.0-or-later). Los comentarios de `third_party/3dsrecomp` comparan comportamientos con ellos. Builder puede leer los archivos del sistema de 3DS que tú mismo hayas extraído desde sus carpetas de usuario.
+- **[3dbrew](https://www.3dbrew.org/)** y **[WiiUBrew](https://wiiubrew.org/)**: documentación del hardware y del sistema.
+- **Títulos homebrew de shinyquagsire23**: estructura de campos de `app.xml`, `cos.xml` y `meta.xml`.
+- **[Cemu](https://github.com/cemu-project/Cemu)** (MPL-2.0): los desarrolladores prueban compilaciones en él. No se distribuye con la aplicación.
+- **[3dsrecomp](https://github.com/fearkov/3dsrecomp)** de fearkov y **[Zakuro](https://github.com/fearkov/zakuro)** son proyectos independientes. El `third_party/3dsrecomp` de 3Dii U pertenece a nathsou (su historial está en el repositorio de nathsou), y Zakuro no se utiliza.
 
-## What a public release has to include
+## Qué debe incluir una versión pública
 
-These follow from the licences above.
+Estas obligaciones se derivan de las licencias anteriores.
 
-1. **EUPL-1.2 (3Dii U and 3dsrecomp).** The source of the version you release. This repository is that source, and the
-   app also carries it in `engine/`. Keep `LICENSE`, this file and the copyright notices.
-2. **GPL (GCC, Binutils, wut-tools, general-tools, gamecube-tools, pkg-config).** The app ships their binaries, so each
-   release must also offer their exact source. The simplest way is to attach it to the same GitHub release:
-   devkitPro's sources for devkitPPC 16.2.0 (GCC), Binutils 2.47 and newlib 4.6.0.20260123
-   ([devkitPro/buildscripts](https://github.com/devkitPro/buildscripts)), wut-tools 1.3.5, general-tools 1.4.4 and
-   gamecube-tools 1.0.7.
-3. **LGPL (FFmpeg 4.4, Qt 6.12, PySide6 6.12, and the unused mpg123 and libsmb2).** Their source, the same way.
-   FFmpeg's is [ffmpeg-4.4.tar.xz](https://ffmpeg.org/releases/ffmpeg-4.4.tar.xz) plus `tools/aac_build.sh`. Qt and
-   PySide6 stay separate, replaceable files in the app.
-4. **Permissive licences (MIT, BSD, Zlib, Apache-2.0, PSF).** Their notices. This file carries them, and the app ships
-   this file.
+1. **EUPL-1.2 (3Dii U y 3dsrecomp).** El código fuente de la versión que publiques. Este repositorio contiene ese código y la aplicación también lo incluye en `engine/`. Conserva `LICENSE`, este archivo y los avisos de copyright.
+2. **GPL (GCC, Binutils, wut-tools, general-tools, gamecube-tools y pkg-config).** La aplicación distribuye sus binarios, por lo que cada versión publicada también debe ofrecer el código fuente exacto. La opción más sencilla es adjuntarlo a la misma versión de GitHub: fuentes de devkitPro para devkitPPC 16.2.0 (GCC), Binutils 2.47 y newlib 4.6.0.20260123 ([devkitPro/buildscripts](https://github.com/devkitPro/buildscripts)), wut-tools 1.3.5, general-tools 1.4.4 y gamecube-tools 1.0.7.
+3. **LGPL (FFmpeg 4.4, Qt 6.12, PySide6 6.12 y los componentes no utilizados mpg123 y libsmb2).** También debe ofrecerse su código fuente. Para FFmpeg es [ffmpeg-4.4.tar.xz](https://ffmpeg.org/releases/ffmpeg-4.4.tar.xz) junto con `tools/aac_build.sh`. Qt y PySide6 permanecen como archivos independientes y reemplazables en la aplicación.
+4. **Licencias permisivas (MIT, BSD, Zlib, Apache-2.0 y PSF).** Se deben conservar sus avisos. Este archivo los incluye y la aplicación distribuye este mismo archivo.
 
-## Notices
+## Avisos
 
 ### 3dsrecomp
 
