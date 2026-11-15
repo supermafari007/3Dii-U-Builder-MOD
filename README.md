@@ -1,94 +1,69 @@
 # 3Dii U
 
-3Dii U turns Nintendo 3DS games you own into Wii U games. It recompiles the game's ARM code to C, compiles that for the
-Wii U's PowerPC CPU, translates the 3DS GPU's work to the Wii U GPU, and packs the result as a title that WUP Installer GX2
-installs on a modded Wii U.
+3Dii U convierte los juegos de Nintendo 3DS que posees en juegos para Wii U. Recompila el código ARM del juego a C, compila ese código para la CPU PowerPC de Wii U, traduce el trabajo de la GPU de 3DS para la GPU de Wii U y empaqueta el resultado como un título que WUP Installer GX2 puede instalar en una Wii U modificada.
 
-## Built on
+## Basado en
 
-3Dii U exists because of these open-source projects. Their full notices and licence texts are in
-[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+3Dii U existe gracias a estos proyectos de código abierto. Sus avisos completos y textos de licencia se encuentran en [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
-- **[3dsrecomp](https://github.com/nathsou/3dsrecomp)** by **Nathan Soufflet (nathsou)**, EUPL-1.2: the 3DS recompiler
-  and runtime 3Dii U is built on. It lives in `third_party/3dsrecomp`, with this project's changes for the Wii U.
-- **[devkitPro](https://devkitpro.org/)**: devkitPPC (GCC, Binutils, newlib), [wut](https://github.com/devkitPro/wut) and
-  [wut-tools](https://github.com/devkitPro/wut-tools), the Wii U toolchain.
-- **[CafeGLSL](https://github.com/Exzap/CafeGLSL)** by **Exzap**, on Mesa (MIT): the shader compiler for the Wii U GPU.
-- **[FFmpeg](https://ffmpeg.org/)** (LGPL-2.1+): its AAC decoder, for games with AAC music.
-- **[makerom](https://github.com/3DSGuy/Project_CTR)** from Project_CTR by **3DSGuy, applestash and Jakcron** (MIT), and
-  **[pyctr](https://github.com/ihaveamac/pyctr)** by **Ian Burgwin (ihaveamac)** (MIT): reading and decrypting your dumps.
-- **[Qt and PySide6](https://www.qt.io/)** (LGPL-3.0), **[Python](https://www.python.org/)**,
-  **[PyCryptodome](https://www.pycryptodome.org/)**, **[cryptography](https://cryptography.io/)** and
-  **[PyInstaller](https://pyinstaller.org/)**: the builder app.
-- **[woomïnstaller](https://github.com/shinyquagsire23/woominstaller)** by **shinyquagsire23** (LGPL-2.1): the boot movie
-  every title carries.
+- **[3dsrecomp](https://github.com/nathsou/3dsrecomp)**, de **Nathan Soufflet (nathsou)**, EUPL-1.2: el recompilador de 3DS y el entorno de ejecución sobre los que se construye 3Dii U. Se encuentra en `third_party/3dsrecomp`, junto con las modificaciones de este proyecto para Wii U.
+- **[devkitPro](https://devkitpro.org/)**: devkitPPC (GCC, Binutils, newlib), [wut](https://github.com/devkitPro/wut) y [wut-tools](https://github.com/devkitPro/wut-tools), la cadena de herramientas para Wii U.
+- **[CafeGLSL](https://github.com/Exzap/CafeGLSL)**, de **Exzap**, basado en Mesa (MIT): el compilador de shaders para la GPU de Wii U.
+- **[FFmpeg](https://ffmpeg.org/)** (LGPL-2.1+): su decodificador AAC, para juegos con música AAC.
+- **[makerom](https://github.com/3DSGuy/Project_CTR)** de Project_CTR, de **3DSGuy, applestash y Jakcron** (MIT), y **[pyctr](https://github.com/ihaveamac/pyctr)**, de **Ian Burgwin (ihaveamac)** (MIT): lectura y descifrado de tus volcados.
+- **[Qt y PySide6](https://www.qt.io/)** (LGPL-3.0), **[Python](https://www.python.org/)**, **[PyCryptodome](https://www.pycryptodome.org/)**, **[cryptography](https://cryptography.io/)** y **[PyInstaller](https://pyinstaller.org/)**: la aplicación Builder.
+- **[woomïnstaller](https://github.com/shinyquagsire23/woominstaller)**, de **shinyquagsire23** (LGPL-2.1): la secuencia de arranque que incluye cada título.
 
-Its documentation draws on [3dbrew](https://www.3dbrew.org/) and [WiiUBrew](https://wiiubrew.org/). The WUP layout was
-learned from Maschell's [NUSPacker](https://github.com/Maschell/NUSPacker), but none of NUSPacker's code is used.
+La documentación también se basa en [3dbrew](https://www.3dbrew.org/) y [WiiUBrew](https://wiiubrew.org/). La estructura WUP se estudió a partir de [NUSPacker](https://github.com/Maschell/NUSPacker), de Maschell, pero no se utiliza ningún código de NUSPacker.
 
-## Free and open-source
+## Gratuito y de código abierto
 
-3Dii U is **100% free and open-source**, under the [European Union Public Licence v1.2](LICENSE). Every build is free:
-there are no paid builds, no paid beta tiers and no paywalled features. You may use, study, share and change it under the
-EUPL-1.2. If you distribute a changed version, you must offer its source under the same licence.
+3Dii U es **100 % gratuito y de código abierto**, bajo la [Licencia Pública de la Unión Europea v1.2](LICENSE). Todas las versiones son gratuitas: no hay versiones de pago, niveles beta de pago ni funciones bloqueadas tras un pago. Puedes usarlo, estudiarlo, compartirlo y modificarlo conforme a la EUPL-1.2. Si distribuyes una versión modificada, debes ofrecer su código fuente bajo la misma licencia.
 
-**Status: beta, Windows only.** [`builder/compat.json`](builder/compat.json) lists the games that have been played on a
-real Wii U. Any other game builds as "untested": it may not start, or it may stop partway.
+**Estado: beta, solo para Windows.** [`builder/compat.json`](builder/compat.json) enumera los juegos que se han probado en una Wii U real. Cualquier otro juego se compila como «sin probar»: puede que no inicie o que se detenga a mitad de la ejecución.
 
-## What you need to supply
+## Lo que debes aportar
 
-3Dii U contains **no game data, no keys and no Nintendo files**. There's no game code, no assets and no generated C in
-this repository or in the app. Everything comes from your own consoles and your own games, which you dump yourself:
+3Dii U **no incluye datos de juegos, claves ni archivos de Nintendo**. Este repositorio y la aplicación no contienen código de juegos, recursos gráficos ni código C generado. Todo proviene de tus propias consolas y de tus propios juegos, que debes volcar tú mismo:
 
-| File | What it is | Where it comes from |
+| Archivo | Qué es | De dónde se obtiene |
 |---|---|---|
-| Your game dumps (`.3ds`, `.cci`, `.cia`) | The 3DS games you own, plus their updates and DLC if you have them | Dumped from your own 3DS, e.g. with [GodMode9](https://3ds.hacks.guide/) |
-| `otp.bin` | Your Wii U's one-time-programmable memory. The WUP is packed with the key in it | Your own Wii U's NAND backup ([Wii U Hacks Guide](https://wiiu.hacks.guide/)) |
-| `boot9.bin` | Your 3DS's ARM9 boot ROM. Only needed for encrypted dumps | Dumped from your own 3DS with GodMode9 |
-| `seeddb.bin` | Your 3DS's seed database. Only some digital games need it | Dumped from your own 3DS with GodMode9 |
-| 3DS system files (`0004009b` and `000400db`) | Your 3DS's shared font, Mii data and bad-word list, which games load from the console itself | Your own 3DS: GodMode9, or Azahar's "Set Up System Files" with the Artic Setup Tool |
+| Volcados de tus juegos (`.3ds`, `.cci`, `.cia`) | Los juegos de 3DS que posees, junto con sus actualizaciones y DLC, si los tienes | Se obtienen desde tu propia 3DS, por ejemplo, con [GodMode9](https://3ds.hacks.guide/) |
+| `otp.bin` | La memoria OTP (programable una sola vez) de tu Wii U. El WUP se empaqueta con la clave que contiene | Copia de seguridad de la NAND de tu propia Wii U ([Wii U Hacks Guide](https://wiiu.hacks.guide/)) |
+| `boot9.bin` | La ROM de arranque ARM9 de tu 3DS. Solo se necesita para volcados cifrados | Se extrae de tu propia 3DS con GodMode9 |
+| `seeddb.bin` | La base de datos de semillas de tu 3DS. Solo algunos juegos digitales la necesitan | Se extrae de tu propia 3DS con GodMode9 |
+| Archivos del sistema 3DS (`0004009b` y `000400db`) | La fuente compartida, los datos Mii y la lista de palabras prohibidas de tu 3DS, que algunos juegos cargan desde la propia consola | Tu propia 3DS: GodMode9 o «Set Up System Files» de Azahar con Artic Setup Tool |
 
-The builder checks each file before a build uses it. It never prints, stores or uploads what's in them, and it never
-bundles them: the app refuses to package if one of these files is inside it. Don't ask for these files in the issue
-tracker, and don't post them. Links to copyrighted games or keys aren't allowed anywhere in this project.
+Builder comprueba cada archivo antes de utilizarlo en una compilación. Nunca muestra, almacena ni sube su contenido, y tampoco los incluye en sus paquetes: la aplicación se niega a empaquetar archivos si alguno de ellos está dentro de ella. No solicites estos archivos en el sistema de incidencias ni los publiques. Los enlaces a juegos protegidos por derechos de autor o a claves no están permitidos en ninguna parte de este proyecto.
 
-To play what you build, you need a Wii U running [Aroma](https://aroma.foryour.cafe/) **with its sigpatches module**
-(`01_sigpatches.rpn`). Without that module, built games stop with error 199-9999. You also need
-[WUP Installer GX2](https://github.com/Fangal-Airbag/wup-installer-gx2).
+Para jugar con lo que compiles, necesitas una Wii U con [Aroma](https://aroma.foryour.cafe/) **y su módulo sigpatches** (`01_sigpatches.rpn`). Sin ese módulo, los juegos compilados se detienen con el error 199-9999. También necesitas [WUP Installer GX2](https://github.com/Fangal-Airbag/wup-installer-gx2).
 
-## Using it
+## Cómo utilizarlo
 
-Most people want **3Dii U Builder**, the desktop app in [`builder/`](builder/README.md). You pick a dump, and it builds
-the game and puts it on your SD card. Releases of the standalone app need no Python and no toolchain. Its About button,
-and `pipeline.py --credits`, list the projects it's built on.
+La mayoría de los usuarios querrán **3Dii U Builder**, la aplicación de escritorio ubicada en [`builder/`](builder/README.md). Seleccionas un volcado y la aplicación compila el juego y lo coloca en tu tarjeta SD. Las versiones independientes de la aplicación no necesitan Python ni una cadena de herramientas. El botón «About» y `pipeline.py --credits` enumeran los proyectos en los que se basa.
 
-## Working on it
+## Desarrollo
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) explains how a dump becomes a WUP, and what each part of the code does.
-- [CONTRIBUTING.md](CONTRIBUTING.md) covers the toolchain, building and the self-checks.
+- [ARCHITECTURE.md](ARCHITECTURE.md) explica cómo un volcado se convierte en un WUP y qué función cumple cada parte del código.
+- [CONTRIBUTING.md](CONTRIBUTING.md) explica la cadena de herramientas, cómo compilar y cómo ejecutar las comprobaciones automáticas.
 
-| Folder | What's in it |
+| Carpeta | Contenido |
 |---|---|
-| `third_party/3dsrecomp/` | nathsou's 3DS recompiler and runtime (EUPL-1.2), with this project's changes |
-| `port/wiiu/` | The Wii U side: threads, GX2 graphics, shaders, audio, saves, input, the in-game menu |
-| `port/pc/` | A headless Windows build of the same runtime. It finds code the recompiler missed and logs the shaders a game uses |
-| `tools/` | The build (`tools/win/build3ds.py`), the title and WUP steps, the shader tools and developer tools |
-| `builder/` | 3Dii U Builder: the window, the build pipeline, dump reading, decryption and mods |
-| `phase0/` | The first feasibility benchmark. The WUP packer and the title templates still live here |
+| `third_party/3dsrecomp/` | Recompilador y entorno de ejecución de 3DS de nathsou (EUPL-1.2), con las modificaciones de este proyecto |
+| `port/wiiu/` | La parte de Wii U: hilos, gráficos GX2, shaders, audio, partidas guardadas, controles y menú dentro del juego |
+| `port/pc/` | Una compilación de Windows sin interfaz del mismo entorno de ejecución. Detecta código que el recompilador no encontró y registra los shaders que utiliza un juego |
+| `tools/` | Herramientas de compilación (`tools/win/build3ds.py`), pasos de creación del título y del WUP, herramientas de shaders y utilidades para desarrolladores |
+| `builder/` | 3Dii U Builder: ventana, proceso de compilación, lectura de volcados, descifrado y mods |
+| `phase0/` | El primer banco de pruebas de viabilidad. El empaquetador WUP y las plantillas de títulos todavía se encuentran aquí |
 
-## Licence
+## Licencia
 
-Copyright © 2026 josiahg2502-glitch and the 3Dii U contributors.
+Copyright © 2026 josiahg2502-glitch y los colaboradores de 3Dii U.
 
-Licensed under the [EUPL-1.2](LICENSE). nathsou's 3dsrecomp, in `third_party/3dsrecomp`, is under the same licence, and
-its own copy is in [`third_party/3dsrecomp/LICENSE`](third_party/3dsrecomp/LICENSE). Everything else 3Dii U uses or ships,
-and what each licence asks of a release, is in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Licenciado bajo la [EUPL-1.2](LICENSE). El código de 3dsrecomp de nathsou, ubicado en `third_party/3dsrecomp`, utiliza la misma licencia y tiene su propia copia en [`third_party/3dsrecomp/LICENSE`](third_party/3dsrecomp/LICENSE). [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) contiene la información sobre todo lo demás que utiliza o distribuye 3Dii U y los requisitos de cada licencia para las versiones publicadas.
 
-## Legal
+## Aviso legal
 
-3Dii U is an independent project. It is **not affiliated with, endorsed by or sponsored by Nintendo**. Nintendo 3DS, Wii U
-and the names of Nintendo's games are trademarks of Nintendo, used here only to say what the software works with.
+3Dii U es un proyecto independiente. **No está afiliado, respaldado ni patrocinado por Nintendo**. Nintendo 3DS, Wii U y los nombres de los juegos de Nintendo son marcas comerciales de Nintendo y se utilizan aquí únicamente para indicar con qué software es compatible este proyecto.
 
-3Dii U is intended solely for games and system files you have dumped yourself from consoles and games you own, and for
-homebrew. Don't use it with copies you don't own. Games it builds contain code from your dumps, so they're for your own
-console only: don't share them. The software is provided as is, without warranty, as set out in the licence.
+3Dii U está destinado exclusivamente a juegos y archivos del sistema que hayas extraído tú mismo de consolas y juegos que posees, así como a homebrew. No lo utilices con copias que no te pertenezcan. Los juegos que compila contienen código procedente de tus propios volcados, por lo que están destinados únicamente a tu propia consola: no los compartas. El software se proporciona «tal cual», sin garantía, según lo establecido en la licencia.
