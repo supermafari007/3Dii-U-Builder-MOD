@@ -40,10 +40,10 @@ def checked(chosen):
     source = the_save(chosen)
     found = files_in(source)
     if not found:
-        raise SaveError('No hay archivos en esa carpeta. Selecciona la carpeta que contiene la partida: Checkpoint\'s or JKSM\'s folder for the game, '
-                        'or the emulator\'s folder of it.')
+        raise SaveError('No hay archivos en esa carpeta. Selecciona la carpeta que contiene la partida: carpeta del juego de Checkpoint o JKSM, '
+                        'o la carpeta del juego de un emulador.')
     if sum(size for _, size in found) > ROOM:
-        raise SaveError('Ese contenido supera el tamaño de cualquier partida de un juego de 3DS: choose the folder of this game\'s save alone.')
+        raise SaveError('Ese contenido supera el tamaño de cualquier partida de un juego de 3DS: selecciona únicamente la carpeta de guardado de este juego.')
     return source, len(found)
 
 
