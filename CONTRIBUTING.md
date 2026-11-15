@@ -1,172 +1,142 @@
-# Contributing
+# Cómo contribuir
 
-Thanks for helping. This page covers what to install, how to build, how to check a change, and what must never go into
-the repository. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the parts fit together.
+Gracias por ayudar. Esta página explica qué instalar, cómo compilar, cómo comprobar un cambio y qué cosas nunca deben incluirse en el repositorio. [ARCHITECTURE.md](ARCHITECTURE.md) explica cómo encajan las distintas partes.
 
-## What never goes into the repository
+## Qué nunca debe incluirse en el repositorio
 
-`.gitignore` is a whitelist: only the source folders are tracked, and everything else at the top level stays out. Keep
-it that way, and don't add exceptions for any of these:
+`.gitignore` funciona como una lista permitida: solo se siguen las carpetas de código fuente y todo lo demás en el nivel superior queda excluido. Mantén ese comportamiento y no agregues excepciones para ninguno de estos elementos:
 
-| What | Where it lives on your PC | Why it stays out |
+| Elemento | Dónde se encuentra en tu PC | Por qué se excluye |
 |---|---|---|
-| Game files: code, RomFS, ExeFS, exheader, icons | `games/<name>/` | They're the game publisher's copyrighted work |
-| Generated C | `games/<name>/gen_abi/`, `gen_safe/` | It's the game's code, translated |
-| Shader logs with vertex programs (`vs_log.bin`, `dvlb.bin`) | `games/<name>/shader_logs/` | Vertex programs are the game's code. The builder ships fingerprints of them instead (`builder/shaderlogs.py`) |
-| Screenshots and contact sheets | `games/<name>/shots/` | The game's imagery |
-| 3DS system archives (shared font, Mii data) | `games/system_archives/` | They come from a 3DS |
-| Keys: `boot9.bin`, `seeddb.bin`, `otp.bin` | anywhere outside the repository | They're your consoles' secrets |
-| Build outputs: objects, RPXs, title folders, WUPs, the standalone app | `build*/`, `dist/`, `builder/dist/`, `builder_work/`, `phase0/build/` | Large, made again by a build, and they contain game data |
-| Logs and console captures | `games/<name>/console/`, `*.log` | Game output, memory contents and your network's addresses |
-| The console tools | `tools/console_*` | They hold one developer's console address and PC paths. They come back once those are arguments |
-| The old WSL environment | `env/` | It holds one developer's PC paths, and the build no longer uses it |
-| Third-party binaries | `third_party/cafeglsl*/`, `toolchain/aac_ppc/`, `builder/bin/makerom.exe` | Not this project's code. `tools/setup.py` fetches them from a release |
+| Archivos de juegos: código, RomFS, ExeFS, exheader e iconos | `games/<name>/` | Son obras protegidas por derechos de autor de los editores de los juegos |
+| Código C generado | `games/<name>/gen_abi/`, `gen_safe/` | Es el código del juego traducido |
+| Registros de shaders con programas de vértices (`vs_log.bin`, `dvlb.bin`) | `games/<name>/shader_logs/` | Los programas de vértices son código del juego. Builder distribuye huellas digitales en su lugar (`builder/shaderlogs.py`) |
+| Capturas de pantalla y hojas de contacto | `games/<name>/shots/` | Contienen imágenes del juego |
+| Archivos del sistema de 3DS (fuente compartida y datos Mii) | `games/system_archives/` | Proceden de una 3DS |
+| Claves: `boot9.bin`, `seeddb.bin`, `otp.bin` | En cualquier ubicación fuera del repositorio | Son secretos de tus consolas |
+| Resultados de compilación: objetos, RPX, carpetas de títulos, WUP y aplicación independiente | `build*/`, `dist/`, `builder/dist/`, `builder_work/`, `phase0/build/` | Ocupan mucho espacio, se pueden volver a generar y contienen datos de juegos |
+| Registros y capturas de consola | `games/<name>/console/`, `*.log` | Pueden contener resultados del juego, contenido de memoria y direcciones de tu red |
+| Herramientas de consola | `tools/console_*` | Contienen la dirección de la consola y las rutas del PC de un desarrollador. Podrán volver a incluirse cuando esos datos se reciban como argumentos |
+| Entorno WSL antiguo | `env/` | Contiene rutas del PC de un desarrollador y la compilación ya no lo utiliza |
+| Binarios de terceros | `third_party/cafeglsl*/`, `toolchain/aac_ppc/`, `builder/bin/makerom.exe` | No son código de este proyecto. `tools/setup.py` los descarga desde una versión publicada |
 
-Machine-specific settings, such as paths and your console's address, belong in arguments or environment variables,
-never in the code.
+Los ajustes específicos de una máquina, como las rutas y la dirección de tu consola, deben proporcionarse mediante argumentos o variables de entorno, nunca escribirse directamente en el código.
 
-## Setting up
+## Preparación del entorno
 
-You need Windows 10 or 11 and [Python](https://www.python.org/) 3.10 or newer. Contributions are welcome under the
-project's licence, the [EUPL-1.2](LICENSE). Never add keys, console dumps or anything from a game: see "What never goes into
-the repository" above. Then:
+Necesitas Windows 10 u 11 y [Python](https://www.python.org/) 3.10 o posterior. Las contribuciones se aceptan bajo la licencia del proyecto, [EUPL-1.2](LICENSE). Nunca agregues claves, volcados de consolas ni contenido de juegos: consulta la sección «Qué nunca debe incluirse en el repositorio». Después:
 
-1. Install the GitHub CLI and sign in: `winget install GitHub.cli`, then `gh auth login`.
-2. Get the code: `gh repo clone J-Glitch2502/3dii-u`
-3. In that folder, run `python tools/setup.py`.
+1. Instala GitHub CLI e inicia sesión: `winget install GitHub.cli` y luego `gh auth login`.
+2. Obtén el código: `gh repo clone J-Glitch2502/3dii-u`.
+3. Dentro de esa carpeta, ejecuta `python tools/setup.py`.
 
-The setup script checks every tool the build needs, and installs what it can:
+El script de configuración comprueba todas las herramientas que necesita la compilación e instala las que puede:
 
-- the Python packages
-- MinGW's GCC
-- devkitPPC and wut
-- a zip of prebuilt dependencies from this repository's releases
+- los paquetes de Python;
+- GCC de MinGW;
+- devkitPPC y wut;
+- un ZIP con dependencias precompiladas, disponible en las versiones publicadas de este repositorio.
 
-MSYS2 and LLVM have their own installers, so for those it tells you what to install. Run it again afterwards.
-`--check` only reports.
+MSYS2 y LLVM tienen instaladores propios. Para ellos, el script indica qué debes instalar. Después, vuelve a ejecutarlo. La opción `--check` solo informa del estado y no instala nada.
 
-This is what ends up installed:
+Estas son las herramientas que quedarán instaladas:
 
-| Tool | Where it goes | Version tested | Used for |
+| Herramienta | Ubicación | Versión probada | Uso |
 |---|---|---|---|
-| Python packages: PySide6-Essentials, pyctr, pycryptodome, cryptography | | PySide6 6.12, pyctr 0.7.6 | the builder, decrypting, packing WUPs |
-| MSYS2, with `mingw-w64-x86_64-gcc` | `C:\msys64` | GCC 16.2 | the toolchain installer, and the C library for the PC builds |
-| LLVM | `C:\Program Files\LLVM` | clang 23.1 | the shader generator and the PC trial |
-| devkitPPC and wut | `C:\devkitPro`, from `tools/win/install_toolchain.sh` | see below | the Wii U build |
-| CafeGLSL v0.2.0 for Windows | `third_party/cafeglsl/` | v0.2.0 | compiling shaders ahead of time |
-| CafeGLSL v1.0.0-rc1 for the Wii U | `third_party/cafeglsl_ppc/` | v1.0.0-rc1 | compiling missing shaders on the console |
-| FFmpeg's AAC decoder, built for the Wii U | `toolchain/aac_ppc/` | FFmpeg 4.4 | games with AAC music, and every untested game |
-| makerom | `builder/bin/makerom.exe` | v0.19.0 | turning a game's CIA into a `.3ds` before decrypting |
-| Cemu, portable (only for `check_ports.py`, install it yourself) | `build_win/cemu/` | | `tools/check_ports.py` |
+| Paquetes Python: PySide6-Essentials, pyctr, pycryptodome y cryptography | | PySide6 6.12, pyctr 0.7.6 | Builder, descifrado y empaquetado de WUP |
+| MSYS2 con `mingw-w64-x86_64-gcc` | `C:\\msys64` | GCC 16.2 | Instalador de la cadena de herramientas y biblioteca C para compilaciones de PC |
+| LLVM | `C:\\Program Files\\LLVM` | clang 23.1 | Generador de shaders y pruebas en PC |
+| devkitPPC y wut | `C:\\devkitPro`, desde `tools/win/install_toolchain.sh` | Consulta más abajo | Compilación para Wii U |
+| CafeGLSL v0.2.0 para Windows | `third_party/cafeglsl/` | v0.2.0 | Compilación anticipada de shaders |
+| CafeGLSL v1.0.0-rc1 para Wii U | `third_party/cafeglsl_ppc/` | v1.0.0-rc1 | Compilación de shaders faltantes en la consola |
+| Decodificador AAC de FFmpeg, compilado para Wii U | `toolchain/aac_ppc/` | FFmpeg 4.4 | Juegos con música AAC y todos los juegos sin probar |
+| makerom | `builder/bin/makerom.exe` | v0.19.0 | Conversión de CIA de un juego a `.3ds` antes del descifrado |
+| Cemu, versión portable (solo para `check_ports.py`; debes instalarlo tú) | `build_win/cemu/` | | `tools/check_ports.py` |
 
-**devkitPPC and wut** are installed with MSYS2's pacman, but with their own settings, database and keys under
-`C:\devkitPro`, so MSYS2's setup isn't changed. The versions tested are devkitppc-gcc 16.2.0-1, devkitppc-binutils
-2.47-2, devkitppc-newlib 4.6.0.20260123-4, devkitppc-crtls 2.1.0-1, wut 1.9.2-1, wut-tools 1.3.5-1 and
-general-tools 1.4.4-1. devkitPro's server only keeps the newest packages, so you may get later ones. Builds made with
-those haven't been tried on a console yet.
+**devkitPPC y wut** se instalan mediante pacman de MSYS2, pero utilizan su propia configuración, base de datos y claves dentro de `C:\\devkitPro`, por lo que no modifican la instalación de MSYS2. Las versiones probadas son devkitppc-gcc 16.2.0-1, devkitppc-binutils 2.47-2, devkitppc-newlib 4.6.0.20260123-4, devkitppc-crtls 2.1.0-1, wut 1.9.2-1, wut-tools 1.3.5-1 y general-tools 1.4.4-1. El servidor de devkitPro solo conserva los paquetes más recientes, por lo que podrías recibir versiones posteriores. Las compilaciones realizadas con ellas todavía no se han probado en una consola.
 
-**The prebuilt dependencies** are the four tools no package manager has. `third_party/DEPS-NOTICES.txt` lists their
-licences after unpacking. This is where each one comes from:
+**Las dependencias precompiladas** son las cuatro herramientas que no ofrece ningún gestor de paquetes. `third_party/DEPS-NOTICES.txt` enumera sus licencias después de extraerlas. Su procedencia es la siguiente:
 
-- **CafeGLSL v0.2.0 for Windows** is built by `tools/win/build_cafeglsl.ps1`. Upstream's own Windows build is a later
-  version, and its vertex shaders draw some scenes wrong.
-- **CafeGLSL's Wii U library** is upstream's v1.0.0-rc1, with traps patched out by
-  `tools/win/patch_cafeglsl_traps.py`.
-- **The AAC libraries** are built by `tools/aac_build.sh`, which so far runs only under WSL.
-- **makerom** is Project_CTR's v0.19.0.
+- **CafeGLSL v0.2.0 para Windows** se compila mediante `tools/win/build_cafeglsl.ps1`. La compilación propia de Windows del proyecto original es de una versión posterior y sus shaders de vértices dibujan incorrectamente algunas escenas.
+- **La biblioteca CafeGLSL para Wii U** es la versión original v1.0.0-rc1, con las instrucciones de trampa eliminadas por `tools/win/patch_cafeglsl_traps.py`.
+- **Las bibliotecas AAC** se compilan mediante `tools/aac_build.sh`, que por ahora solo funciona en WSL.
+- **makerom** es la versión v0.19.0 de Project_CTR.
 
-To update any of them, run `python tools/setup.py --pack` on a PC that has them all. Put the hash it prints into the
-script, and upload the zip as a new release.
+Para actualizar cualquiera de ellas, ejecuta `python tools/setup.py --pack` en un PC que las tenga todas. Introduce en el script el hash que imprime y sube el ZIP como una nueva versión publicada.
 
-## Building a game
+## Compilar un juego
 
-You need a dump of a game you own, and your Wii U's `otp.bin`. The easiest route is the builder's pipeline, which
-works for any game:
+Necesitas un volcado de un juego que poseas y el archivo `otp.bin` de tu Wii U. La forma más sencilla es utilizar el pipeline de Builder, que funciona con cualquier juego:
 
-    python builder/pipeline.py --game <dump> --otp <otp.bin> --out <folder>
+```sh
+python builder/pipeline.py --game <dump> --otp <otp.bin> --out <folder>
+```
 
-It decrypts and unpacks the dump, finds the code, recompiles, compiles the shaders, and packs a WUP into `<folder>`.
-`--update`, `--dlc` and `--mod` add those, and `--help` lists the rest. To run the builder's window from the source,
-open `builder/3Dii U Builder.pyw`.
+Descifra y descomprime el volcado, encuentra el código, lo recompila, compila los shaders y empaqueta un WUP en `<folder>`. Las opciones `--update`, `--dlc` y `--mod` agregan esos contenidos; `--help` enumera las demás opciones. Para abrir la ventana de Builder desde el código fuente, ejecuta `builder/3Dii U Builder.pyw`.
 
-To work on a game step by step:
+Para trabajar en un juego paso a paso:
 
-    python tools/extract_game.py <decrypted .3ds> games/<name>
-    python tools/win/build3ds.py trial <name> 72000 --autoplay 3 --seed 3101
-    python tools/find_entries.py games/<name> --write
-    python tools/win/build3ds.py all <name>
-    python tools/win/build3ds.py pack <name> <otp.bin>
+```sh
+python tools/extract_game.py <decrypted .3ds> games/<name>
+python tools/win/build3ds.py trial <name> 72000 --autoplay 3 --seed 3101
+python tools/find_entries.py games/<name> --write
+python tools/win/build3ds.py all <name>
+python tools/win/build3ds.py pack <name> <otp.bin>
+```
 
-The trial plays the game headless on the PC, records code the recompiler missed, and logs the shaders it meets. Its
-screenshots land in `games/<name>/shots/`. A game that loads CRO modules also needs
-`python tools/cro_entries.py games/<name>`, run with `RECOMP_CRO_BASE=0x1C000000` set. New games need an entry in
-`builder/compat.json`, the one table of tested games: their slug, title ID, name, product code and WUP folder.
+La prueba ejecuta el juego sin interfaz en el PC, registra el código que el recompilador no detectó y guarda los shaders que encuentra. Las capturas quedan en `games/<name>/shots/`. Un juego que carga módulos CRO también necesita `python tools/cro_entries.py games/<name>`, ejecutado con `RECOMP_CRO_BASE=0x1C000000`. Los juegos nuevos necesitan una entrada en `builder/compat.json`, la tabla única de juegos probados: slug, identificador de título, nombre, código de producto y carpeta WUP.
 
-`build3ds.py --help` lists every option. The ones you'll use most are `--jobs N`, `--force`, `--opt -O1`, and
-`--out <folder>`, which keeps a test build apart.
+`build3ds.py --help` enumera todas las opciones. Las que utilizarás con más frecuencia son `--jobs N`, `--force`, `--opt -O1` y `--out <folder>`, que mantiene separada una compilación de prueba.
 
-To build the standalone app, which bundles Python, Qt, devkitPPC and the shader compilers, first run
-`pip install pyinstaller pillow`. Then:
+Para crear la aplicación independiente, que incluye Python, Qt, devkitPPC y los compiladores de shaders, primero ejecuta `pip install pyinstaller pillow`. Después:
 
-    python builder/make_app.py
+```sh
+python builder/make_app.py
+```
 
-It writes `builder/dist/3Dii U Builder/`, and a zip of it for testers. A build that will be published takes
-`--release <tag>`, the tag of its GitHub release (`builder-1.0-beta-2026-11-13`): the app carries it, and that is how an
-app already out there knows a newer release and takes it (`builder/updater.py`, which lists what a release must keep).
+Genera `builder/dist/3Dii U Builder/` y un ZIP para los evaluadores. Una compilación destinada a publicarse utiliza `--release <tag>`, la etiqueta de su versión de GitHub (por ejemplo, `builder-1.0-beta-2026-11-13`). La aplicación conserva esa etiqueta y la utiliza para detectar y descargar versiones nuevas (`builder/updater.py`, que enumera los archivos que cada versión debe conservar).
 
-## Checking a change
+## Comprobar un cambio
 
-This needs no game files and runs in under a minute. Run it before every commit:
+No necesita archivos de juegos y tarda menos de un minuto. Ejecútalo antes de cada commit:
 
-    python tools/selftest.py
+```sh
+python tools/selftest.py
+```
 
-It runs every check of that kind: the small PC tests of the Wii U port's rules (`tools/test_*.cpp`), the tools' own
-self-checks, and the builder's tests (`builder/test_*.py`, `builder/selftest.py`).
+Ejecuta todas las comprobaciones de ese tipo: pequeñas pruebas en PC de las reglas del port de Wii U (`tools/test_*.cpp`), autocomprobaciones de las herramientas y pruebas de Builder (`builder/test_*.py`, `builder/selftest.py`).
 
-These need your own dumps and Cemu, and check a game end to end:
+Estas comprobaciones necesitan tus propios volcados y Cemu, y prueban un juego de principio a fin:
 
-    python tools/check_ports.py [game ... | all]
-    python tools/check_ports.py --cold [game ...]
+```sh
+python tools/check_ports.py [game ... | all]
+python tools/check_ports.py --cold [game ...]
+```
 
-For each game, the first builds the code, shaders and title, checks the RPX against what the console's loader wants,
-then plays a scripted route in a private Cemu copy on a blank save and restarts on what that saved. A game fails on a
-crash, missed code, a vertex shader that wasn't compiled, a save problem, a gap in the sound, or pictures unlike its
-good run's. Every run has the Miis a console would have, made-up ones (an account's, and two in Mii Maker), and a game
-that reads Mii Maker fails if they don't all arrive there: a game that takes Miis must take the Wii U's, so look at
-what it shows for them. Cemu runs off-screen, so it doesn't take over your desktop. `--cold` builds a game of
-`games/sources.json` as someone's first build of it, with none of this PC's lists of its code and shaders, and holds
-it to the same pictures.
+Para cada juego, el primer comando compila el código, los shaders y el título, comprueba el RPX frente a los requisitos del cargador de la consola y después reproduce una secuencia de acciones mediante una copia privada de Cemu, con una partida vacía, y vuelve a iniciar el juego utilizando lo que se guardó. Un juego falla si se cierra inesperadamente, falta código, no se compiló un shader de vértices, hay un problema con la partida, se interrumpe el sonido o las imágenes difieren de una ejecución correcta. Cada ejecución recibe los Miis que tendría una consola: Miis ficticios (uno de una cuenta y dos en Mii Maker). Un juego que lee Mii Maker falla si no recibe todos: un juego que utiliza Miis debe recibir los de Wii U, así que revisa cómo los muestra. Cemu se ejecuta fuera de pantalla y no ocupa tu escritorio. La opción `--cold` compila un juego de `games/sources.json` como si fuera la primera compilación de otra persona, sin utilizar las listas de código y shaders de este PC, y lo compara con las mismas imágenes de referencia.
 
-Run both on the game you're working on before every commit that changes the runtime, the recompiler or `port/wiiu`,
-look at the pictures they keep, and say in the commit what you ran. Cemu has no real GPU and forgives things a console
-doesn't (see the lessons at the end of ARCHITECTURE.md), so say in your pull request whether you also tried a console.
+Ejecuta ambas comprobaciones sobre el juego en el que trabajas antes de cada commit que modifique el entorno de ejecución, el recompilador o `port/wiiu`. Revisa las imágenes que generan e indica en el commit qué pruebas ejecutaste. Cemu no tiene una GPU real y permite cosas que una consola no admite (consulta las lecciones al final de ARCHITECTURE.md), así que indica en tu pull request si también probaste el juego en una consola.
 
-## Trying it on a console
+## Probar en una consola
 
-- Install with WUP Installer GX2. Uninstall any older build of the same game first: installing over it hangs at the
-  banner.
-- Turn Aroma's FTP plugin off while playing. With it on, games can freeze.
-- The game talks to the PC over TCP port 4405: logs, thread dumps and debug commands (`port/wiiu/net_console.cpp`).
-  The PC side is `tools/console_watch.py`, which isn't in the repository until it takes the console's address as an
-  argument.
-- Debug switches are empty files in the title's save folder (`/vol/save/common`), for example `profile` (a CPU
-  profile) and `noglslcompile` (no shader compiling on the console).
+- Instala con WUP Installer GX2. Desinstala primero cualquier versión anterior del mismo juego: instalar encima deja el sistema detenido en el banner.
+- Desactiva el plugin FTP de Aroma mientras juegas. Si está activo, los juegos pueden congelarse.
+- El juego se comunica con el PC mediante TCP, puerto 4405: registros, volcados de hilos y comandos de depuración (`port/wiiu/net_console.cpp`). La parte del PC es `tools/console_watch.py`, que no se incluye en el repositorio hasta que recibe la dirección de la consola como argumento.
+- Las opciones de depuración son archivos vacíos en la carpeta de guardado del título (`/vol/save/common`), por ejemplo `profile` (perfil de CPU) y `noglslcompile` (desactiva la compilación de shaders en la consola).
 
-## Sending changes
+## Enviar cambios
 
-- Keep a pull request to one topic. Describe what it changes, why, and how you tested it.
-- Keep behaviour the same unless the change is meant to alter it, and say when it is.
-- Write comments that explain why the code is the way it is. The story of how a bug was found belongs in the commit
-  message, not in the code.
-- Changes under `third_party/3dsrecomp/` are changes to nathsou's EUPL-1.2 code and stay under that licence. Keep them
-  separate from other changes, so they can be offered upstream.
+- Mantén cada pull request centrado en un solo tema. Describe qué cambia, por qué y cómo lo probaste.
+- Conserva el comportamiento existente, salvo que el cambio tenga como objetivo modificarlo; en ese caso, indícalo.
+- Escribe comentarios que expliquen por qué el código funciona de esa manera. La historia de cómo se encontró un error corresponde al mensaje del commit, no al código.
+- Los cambios dentro de `third_party/3dsrecomp/` modifican el código EUPL-1.2 de nathsou y deben permanecer bajo esa licencia. Mantenlos separados de los demás cambios para que puedan proponerse al proyecto original.
 
-## Pulling a newer 3dsrecomp
+## Incorporar una versión más reciente de 3dsrecomp
 
-`third_party/3dsrecomp` is a git subtree: upstream's code arrived as one squashed commit, and this project's changes are
-ordinary commits on top. To bring in a newer upstream:
+`third_party/3dsrecomp` es un git subtree: el código del proyecto original llegó como un único commit combinado y los cambios de este proyecto son commits normales encima. Para incorporar una versión más reciente del proyecto original:
 
-    git subtree pull --prefix=third_party/3dsrecomp https://github.com/nathsou/3dsrecomp main --squash
+```sh
+git subtree pull --prefix=third_party/3dsrecomp https://github.com/nathsou/3dsrecomp main --squash
+```
 
-Then build and check the ports, as for any runtime change. `git log -- third_party/3dsrecomp` lists this project's
-changes.
+Después, compila y comprueba los ports como harías con cualquier cambio del entorno de ejecución. `git log -- third_party/3dsrecomp` muestra los cambios realizados por este proyecto.
