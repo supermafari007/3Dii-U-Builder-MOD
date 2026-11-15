@@ -292,7 +292,7 @@ def main():
         lacking = [t for t in dumps.archives_named(f.read()) if not os.path.isfile(os.path.join(archives, t + '.romfs'))]
     if lacking:
         t = lacking[0]
-        fail(f'This game reads {dumps.ARCHIVE_NAMES.get(t, "a font")} from the 3DS itself, and your 3DS system files don\'t have it: the game would '
+        fail(f'Este juego lee {dumps.ARCHIVE_NAMES.get(t, "a font")} from the 3DS itself, and your 3DS system files don\'t have it: the game would '
              f'se detendría al iniciarse. Está en la carpeta {t[:8]}: con GodMode9, copia también esa carpeta desde tu 3DS ([1:] SYSNAND CTRNAND > title), '
              f'next to the 0004009b one, and choose the folder again under "3DS system files". Azahar\'s File > Set Up System Files brings it too.')
     # what earlier runs of a game learned (render states it uses; code only static analysis misses) goes with it, if the code is the same.
