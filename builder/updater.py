@@ -164,8 +164,8 @@ def need_room(folder, size, what):
     """refuses before a download or unpack fills the drive halfway"""
     free = shutil.disk_usage(folder).free
     if free < size:
-        raise UpdateError(f'There isn\'t enough free space for {what}: necesita {size / 2**30:.1f} GB en esa unidad, y '
-                          f'{free / 2**30:.1f} GB is free. Free some space and try again.')
+        raise UpdateError(f'No hay espacio libre suficiente para {what}: necesita {size / 2**30:.1f} GB en esa unidad, y '
+                          f'{free / 2**30:.1f}  GB están libres. Libera espacio e inténtalo de nuevo.')
 
 
 def download(release, folder, progress=None, cancelled=None, opener=None):
@@ -173,7 +173,7 @@ def download(release, folder, progress=None, cancelled=None, opener=None):
     None when cancelled before the last piece. A part file is never left behind, and two windows never write the same one. A whole
     <tag>.zip already there (an update whose unpacking was cut short) is used without downloading it again."""
     if not release.url.startswith(DOWNLOADS) or not tag_key(release.tag):
-        raise UpdateError('That update doesn\'t come from the 3Dii U repository, so it wasn\'t downloaded.')
+        raise UpdateError('Esa actualización no procede del repositorio de 3Dii U, por lo que no se descargó.')
     path = os.path.join(folder, release.tag + '.zip')
     if whole(path, release):  # downloaded before, and its unpacking was cut short: used as it is
         if progress:
@@ -183,7 +183,7 @@ def download(release, folder, progress=None, cancelled=None, opener=None):
         os.makedirs(folder, exist_ok=True)
         need_room(folder, 4 * release.size, 'the update')  # the zip, and the app unpacked from it at about three times its size
     except OSError as e:
-        raise UpdateError(f'The update can\'t be saved in {folder}: {e}')
+        raise UpdateError(f'No se puede guardar la actualización en {folder}: {e}')
     part = os.path.join(folder, f'{release.tag}.{os.getpid()}.zip.part')
     done, sha, stopped = 0, hashlib.sha256(), False
     try:
@@ -208,8 +208,8 @@ def download(release, folder, progress=None, cancelled=None, opener=None):
             remove(part)
             return None
         if done != release.size or sha.hexdigest() != release.sha256:
-            raise UpdateError('The download doesn\'t match the release (it was cut short or changed on the way), so it was thrown away. '
-                              'Try again.')
+            raise UpdateError('La descarga no coincide con la versión publicada (se interrumpió antes de tiempo o cambió durante la transferencia), por lo que se descartó. '
+                              'Vuelve a intentarlo.')
         os.replace(part, path)
         return path
     except UpdateError:
@@ -248,7 +248,7 @@ def verify(app):
     if sum(len(fs) for _, _, fs in os.walk(app)) < want:
         raise UpdateError('La actualización está incompleta: faltan algunos archivos. Es posible que un antivirus los haya eliminado.')
     if not same:
-        raise UpdateError('The update holds parts of two versions of the app, so it wasn\'t used.')
+        raise UpdateError('La actualización contiene partes de dos versiones de la aplicación, por lo que no se utilizó.')
 
 
 def safe_name(name):
@@ -263,7 +263,7 @@ def unpack(zip_path, folder):
     that is running is never taken from under it. A zip with any member that could land outside its folder is refused whole."""
     tag = os.path.basename(zip_path)[:-len('.zip')]
     if not zip_path.endswith('.zip') or not tag_key(tag):
-        raise UpdateError('That file isn\'t a 3Dii U Builder update.')
+        raise UpdateError('Ese archivo no es una actualización de 3Dii U Builder.')
     dest, work = os.path.join(folder, tag), os.path.join(folder, f'{tag}.unpacking-{os.getpid()}')
     remove(long_path(work))
     try:
@@ -271,7 +271,7 @@ def unpack(zip_path, folder):
         with zipfile.ZipFile(zip_path) as z:
             members = z.infolist()
             if not members or not all(safe_name(m.filename) for m in members):
-                raise UpdateError('The update\'s zip holds files outside the app\'s folder, so it wasn\'t used.')
+                raise UpdateError('El ZIP de la actualización contiene archivos fuera de la carpeta de la aplicación, por lo que no se utilizó.')
             need_room(folder, sum(m.file_size for m in members) + (256 << 20), 'unpacking the update')
             z.extractall(long_path(work))
         verify(long_path(os.path.join(work, TOP)))
@@ -281,9 +281,9 @@ def unpack(zip_path, folder):
         except OSError:
             labelled = ''
         if labelled != tag:  # a version runs by the tag it was built with: under another one it would be offered itself as an update
-            raise UpdateError('The update is labelled as another version, so it wasn\'t used.')
+            raise UpdateError('La actualización está identificada como otra versión, por lo que no se utilizó.')
         if os.path.lexists(dest) and not discard(dest, tag):
-            raise UpdateError('That version is in use: close the app\'s other windows and try again.')
+            raise UpdateError('Esa versión está en uso: cierra las demás ventanas de la aplicación y vuelve a intentarlo.')
         os.rename(long_path(work), long_path(dest))
         return os.path.join(dest, TOP)
     except UpdateError:
@@ -291,7 +291,7 @@ def unpack(zip_path, folder):
         raise
     except Exception as e:
         remove(long_path(work))
-        raise UpdateError(f'The update couldn\'t be unpacked: {e}')
+        raise UpdateError(f'No se pudo descomprimir la actualización: {e}')
 
 
 def home():
@@ -427,13 +427,13 @@ def activate(app):
     app = os.path.abspath(app)
     tag = os.path.basename(os.path.dirname(app))
     if os.path.basename(app) != TOP or not tag_key(tag) or not same_path(os.path.dirname(os.path.dirname(app)), home()):
-        raise UpdateError('That isn\'t a downloaded update, so it wasn\'t made the version to run.')
+        raise UpdateError('Esa no es una actualización descargada, por lo que no se estableció como versión de ejecución.')
     verify(long_path(app))
     with record_lock() as held:
         written = held and write_record({'tag': tag, 'exe': os.path.relpath(os.path.join(app, EXE), home()),
                                          'failed': [t for t in failed_tags() if t != tag]}, 'new')
     if not written:
-        raise UpdateError('The update couldn\'t be made the version to run: its folder can\'t be written to, or another window of the app is '
+        raise UpdateError('No se pudo establecer la actualización como versión de ejecución: no se puede escribir en su carpeta o hay otra ventana de la aplicación '
                           'utilizándola. Vuelve a intentarlo.')
     remove(os.path.join(home(), tag + '.zip'))
 
