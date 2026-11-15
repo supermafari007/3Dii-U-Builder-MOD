@@ -164,7 +164,7 @@ def need_room(folder, size, what):
     """refuses before a download or unpack fills the drive halfway"""
     free = shutil.disk_usage(folder).free
     if free < size:
-        raise UpdateError(f'There isn\'t enough free space for {what}: it needs {size / 2**30:.1f} GB on that drive, and '
+        raise UpdateError(f'There isn\'t enough free space for {what}: necesita {size / 2**30:.1f} GB en esa unidad, y '
                           f'{free / 2**30:.1f} GB is free. Free some space and try again.')
 
 
