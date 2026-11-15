@@ -588,7 +588,7 @@ ApplicationWindow {
                     visible: app.hasGame && !app.building
                     enabled: !win.restarting
                     Pill { text: "Cambiar juego"; onClicked: app.chooseGame() }
-                    Pill { id: artPill; text: "Arte"; accessibleName: "Art and icon"; tip: app.artText; onClicked: artMenu.openAt(artPill) }
+                    Pill { id: artPill; text: "Arte"; accessibleName: "Imagen e icono"; tip: app.artText; onClicked: artMenu.openAt(artPill) }
                 }
                 ProgressPill {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -683,7 +683,7 @@ ApplicationWindow {
                                 text: updateCard.st === "available" ? app.updateNotes
                                     : updateCard.st === "downloading" ? "Downloading... " + app.updateProgress + "%"
                                     : updateCard.st === "unpacking" ? "Unpacking..."
-                                    : updateCard.st === "ready" ? "Ready. It opens the next time you start the Builder."
+                                    : updateCard.st === "ready" ? "Listo. Se abrirá la próxima vez que inicies Builder."
                                     : app.updateMessage
                                 textFormat: Text.PlainText  // release notes are Markdown from GitHub: shown as text, so no picture is fetched
                                 color: pal.label; font.pixelSize: 17; wrapMode: Text.WordWrap
@@ -701,8 +701,8 @@ ApplicationWindow {
                                 Pill { text: "Más tarde"; accessibleName: "Actualizar más tarde"; visible: updateCard.st !== "downloading"; onClicked: app.laterUpdate() }
                                 Pill { text: "Cancelar"; accessibleName: "Cancelar la descarga"; tone: "red"; visible: updateCard.st === "downloading"; onClicked: app.cancelUpdate() }
                                 Pill { text: "Update"; accessibleName: "Descargar la actualización"; tone: "cyan"; visible: updateCard.st === "available"; onClicked: app.startUpdate() }
-                                Pill { text: "Reiniciar ahora"; accessibleName: "Restart into the new version"; tone: "cyan"; visible: updateCard.st === "ready"; enabled: !app.building; onClicked: app.restartForUpdate() }
-                                Pill { text: "Volver a intentar"; accessibleName: "Try the update again"; tone: "cyan"; visible: updateCard.st === "failed"; onClicked: app.startUpdate() }
+                                Pill { text: "Reiniciar ahora"; accessibleName: "Reiniciar con la nueva versión"; tone: "cyan"; visible: updateCard.st === "ready"; enabled: !app.building; onClicked: app.restartForUpdate() }
+                                Pill { text: "Volver a intentar"; accessibleName: "Volver a intentar la actualización"; tone: "cyan"; visible: updateCard.st === "failed"; onClicked: app.startUpdate() }
                             }
                         }
                     }
@@ -955,20 +955,20 @@ ApplicationWindow {
                     subtitle: "Lo que muestran y reproducen tus juegos en la Wii U al iniciarse."
                     CardRow {
                         label: "Banners e iconos"
-                        sub: app.artKeySet ? "From SteamGridDB, with your key. GameTDB's covers fill in where it has nothing."
-                                           : "Covers from GameTDB. With a free SteamGridDB key (steamgriddb.com, Preferences, API) each game gets a banner and an icon from there."
+                        sub: app.artKeySet ? "Desde SteamGridDB con tu clave. Las portadas de GameTDB completan lo que no esté disponible."
+                                           : "Portadas de GameTDB. Con una clave gratuita de SteamGridDB (steamgriddb.com, Preferences > API), cada juego obtiene allí un banner y un icono."
                         Pill { text: app.artKeySet ? "Cambiar clave" : "Agregar clave"; accessibleName: "Clave de SteamGridDB"; tone: "cyan"; onClicked: app.setArtKey() }
                     }
                     CardRow {
                         label: "Pantallas de inicio"
-                        sub: app.artStyle === "console" ? "As the Wii U's Virtual Console shows a game: its art, its name and when it came out, before a drawing of the 3DS."
-                                                        : "A game's art on its own, filling the screen."
+                        sub: app.artStyle === "console" ? "Como la Consola Virtual de Wii U presenta un juego: imagen, nombre y año de lanzamiento antes de mostrar una ilustración de 3DS."
+                                                        : "Solo la imagen del juego, ocupando toda la pantalla."
                         Pill { text: "Arte"; accessibleName: "Art on its own"; tone: app.artStyle === "picture" ? "cyan" : "grey"; onClicked: app.setArtStyle("picture") }
                         Pill { text: "Consola virtual"; accessibleName: "As the Virtual Console shows a game"; tone: app.artStyle === "console" ? "cyan" : "grey"; onClicked: app.setArtStyle("console") }
                     }
                     CardRow {
                         label: "Sonido de inicio"
-                        sub: app.soundSet ? "Your sound plays while a game starts." : "None: games start silently. Choose a WAV file to have one."
+                        sub: app.soundSet ? "Tu sonido se reproduce mientras se inicia un juego." : "Ninguno: los juegos se inician sin sonido. Selecciona un archivo WAV para agregarlo."
                         Pill { text: "Seleccionar"; accessibleName: "Seleccionar el sonido de inicio"; tone: "cyan"; onClicked: app.chooseSound() }
                         Pill { text: "Quitar"; accessibleName: "Quitar el sonido de inicio"; tone: "red"; visible: app.soundSet; onClicked: app.removeSound() }
                     }
@@ -990,11 +990,11 @@ ApplicationWindow {
                         id: updatesRow
                         readonly property string st: app.updateState
                         readonly property bool offered: ["available", "downloading", "unpacking", "ready", "restarting", "failed"].indexOf(st) >= 0
-                        label: app.releaseTag ? "Release " + app.releaseTag : "Una compilación de prueba"
-                        sub: st === "checking" ? "Checking..." : st === "none" ? "No newer version found."  // also what a check that couldn't reach GitHub ends in
-                            : st === "downloading" || st === "unpacking" ? "A newer version is being downloaded."
-                            : st === "ready" || st === "restarting" ? "A newer version is ready."
-                            : offered ? "A newer version is out." : ""
+                        label: app.releaseTag ? "Versión " + app.releaseTag : "Una compilación de prueba"
+                        sub: st === "checking" ? "Comprobando..." : st === "none" ? "No se encontró una versión más reciente."  // also what a check that couldn't reach GitHub ends in
+                            : st === "downloading" || st === "unpacking" ? "Se está descargando una versión más reciente."
+                            : st === "ready" || st === "restarting" ? "Hay una versión más reciente lista."
+                            : offered ? "Hay una versión más reciente disponible." : ""
                         Pill { text: "Mostrar"; accessibleName: "Mostrar la actualización en la página Compilar"; tone: "cyan"; visible: updatesRow.offered; onClicked: win.page = "build" }
                         Pill { text: "Buscar actualizaciones"; enabled: app.updateState !== "checking"; onClicked: app.checkUpdate() }
                     }
@@ -1049,7 +1049,7 @@ ApplicationWindow {
                         color: againHover.hovered ? pal.gloss : "transparent"
                         HoverHandler { id: againHover }
                         Label { x: 16; anchors.verticalCenter: parent.verticalCenter; text: "Volver a buscar"; color: pal.cyanText; font.pixelSize: 17 }
-                        Hit { id: lookAgain; ringRadius: 21; name: "Look again for SD cards"; role: Accessible.MenuItem; onActivated: app.refreshCards() }
+                        Hit { id: lookAgain; ringRadius: 21; name: "Volver a buscar tarjetas SD"; role: Accessible.MenuItem; onActivated: app.refreshCards() }
                     }
                 }
             }
