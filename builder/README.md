@@ -1,26 +1,26 @@
 # 3Dii U Builder
 
-Convierte tus propios volcados de juegos de 3DS en juegos para Wii U. Elige un juego, indica si quieres incluir su actualización, DLC y algún mod, pulsa **Build It!** y el juego quedará en tu tarjeta SD, listo para instalarse con WUP Installer GX2.
+Convierte tus propios volcados de juegos de 3DS en juegos para Wii U. Elige un juego, indica si quieres incluir su actualización, DLC y algún mod, pulsa **¡Compilar!** y el juego quedará en tu tarjeta SD, listo para instalarse con WUP Installer GX2.
 
 Builder no incluye datos de juegos ni claves. Todo lo que utiliza es tuyo: tus volcados, las claves de tu 3DS si están cifrados y el archivo `otp.bin` de tu Wii U.
 
 ## Cómo utilizarlo
 
 1. Abre **`3Dii U Builder.exe`** en `dist/3Dii U Builder`. Esa carpeta contiene toda la aplicación: puedes copiarla donde quieras, ya que no necesita Python ni una cadena de herramientas instalada. Para ejecutar Builder desde el código fuente, haz doble clic en `3Dii U Builder.pyw`.
-2. Pulsa **Choose a game** (el recuadro grande con el símbolo **+**, o Ctrl+O) y selecciona un volcado. Puede ser un archivo `.3ds`, `.cci`, `.cia`, `.cxi` o `.app`, cifrado o descifrado. El recuadro muestra la imagen del juego y, debajo, su nombre y desarrollador. Una etiqueta indica qué tan bien se sabe que funciona: **Complete on Wii U** para un juego terminado, **Plays on Wii U** para los demás juegos probados y **Untested** para el resto.
+2. Pulsa **Elegir un juego** (el recuadro grande con el símbolo **+**, o Ctrl+O) y selecciona un volcado. Puede ser un archivo `.3ds`, `.cci`, `.cia`, `.cxi` o `.app`, cifrado o descifrado. El recuadro muestra la imagen del juego y, debajo, su nombre y desarrollador. Una etiqueta indica qué tan bien se sabe que funciona: **Completo en Wii U** para un juego terminado, **Jugable en Wii U** para los demás juegos probados y **Sin probar** para el resto.
 3. Builder te preguntará por la **actualización** y el **DLC** directamente en su ventana:
    - Si están en la misma carpeta que el juego, mostrará sus nombres y preguntará si quieres utilizarlos.
    - Si no están allí, preguntará si los tienes y te permitirá seleccionar los archivos.
-   - Más adelante puedes cambiar o quitar cualquiera de ellos desde **Extras**.
-   - Después preguntará por un **mod** (consulta [Mods](#mods)): selecciona su archivo `.zip` o su carpeta. También puedes gestionarlo desde **Extras**.
-4. **Your Files**: los indicadores se vuelven cian cuando Builder dispone de todo lo necesario.
+   - Más adelante puedes cambiar o quitar cualquiera de ellos desde **Opciones adicionales**.
+   - Después preguntará por un **mod** (consulta [Mods](#mods)): selecciona su archivo `.zip` o su carpeta. También puedes gestionarlo desde **Opciones adicionales**.
+4. **Tus archivos**: los indicadores se vuelven cian cuando Builder dispone de todo lo necesario.
    - **3DS keys** solo se necesitan para volcados cifrados. Builder los descifra siguiendo el procedimiento de `cia_to_decrypted_3ds.py`: makerom convierte la CIA del juego en un archivo `.3ds` y después pyctr lo descifra, utilizando `boot9.bin` y `seeddb.bin` de tu propia 3DS. Los busca en la carpeta `.3ds` de tu usuario (`C:\\Users\\<you>\\.3ds`), que es la ubicación propia de pyctr. Si los tienes en otro lugar, selecciona esa carpeta. GodMode9 puede extraer ambos archivos de una 3DS.
    - **Wii U otp.bin** proviene de una copia de seguridad de la NAND de tu propia consola. El WUP se empaqueta con la clave que contiene; Builder nunca muestra ni almacena esa clave.
-5. **Put it on**: elige tu tarjeta SD (las tarjetas preparadas para Wii U aparecen primero) o una carpeta.
-6. **Build It!**: el proceso tarda un tiempo, especialmente con juegos grandes. El código del juego se recompila para Wii U y sus shaders se compilan por adelantado. Verás cómo se completa cada etapa. Mientras tanto, puedes seguir usando el PC; **Cancel** detiene el proceso de forma segura y **Details** muestra todo lo que imprime la compilación.
+5. **Destino**: elige tu tarjeta SD (las tarjetas preparadas para Wii U aparecen primero) o una carpeta.
+6. **¡Compilar!**: el proceso tarda un tiempo, especialmente con juegos grandes. El código del juego se recompila para Wii U y sus shaders se compilan por adelantado. Verás cómo se completa cada etapa. Mientras tanto, puedes seguir usando el PC; **Cancelar** detiene el proceso de forma segura y **Detalles** muestra todo lo que imprime la compilación.
 7. Inserta la tarjeta en tu Wii U e instala el juego con **WUP Installer GX2**. Si ya habías instalado una versión anterior del mismo juego, elimínala primero (Configuración de la consola, Gestión de datos) y luego instala la nueva.
 
-La sección **Games**, en la barra izquierda, conserva los juegos que seleccionaste anteriormente y muestra los que se han probado en una Wii U real. **Help** responde preguntas sobre los requisitos y contiene la versión, la comprobación de actualizaciones y la opción de apariencia clara u oscura.
+La sección **Juegos**, en la barra izquierda, conserva los juegos que seleccionaste anteriormente y muestra los que se han probado en una Wii U real. **Ayuda** responde preguntas sobre los requisitos y contiene la versión, la comprobación de actualizaciones y la opción de apariencia clara u oscura.
 
 Las partidas se guardan en el almacenamiento de guardado propio del juego en la consola, igual que en cualquier juego instalado. Puedes verlas en Gestión de datos.
 
@@ -78,7 +78,7 @@ Por ahora se necesita Windows 10 u 11 (Linux está previsto):
   - Builder los copia desde la carpeta de usuario de Azahar o Citra, o desde cualquier carpeta que contenga una NAND de 3DS hasta tres niveles de profundidad dentro de Descargas, Escritorio o Documentos, independientemente del nombre de la carpeta. Los conserva en su carpeta de trabajo.
   - Desde una 3DS, GodMode9 permite copiar `title/0004009b` (fuente y datos Mii) y `title/000400db` (lista de palabras prohibidas) desde `[1:] SYSNAND CTRNAND`. En Builder, selecciona cualquiera de esas carpetas (o la carpeta que las contiene) con «Folder». La compilación se detiene si el código del juego solicita un archivo que no está disponible (`dumps.archives_named`): Tomodachi Life, por ejemplo, no inicia sin la lista de palabras. Azahar obtiene estos archivos mediante File > Set Up System Files y Artic Setup Tool.
   - El contenido de la NAND puede estar en formato NCCH (`<n>.app`, cifrado como en la 3DS o ya descifrado) o como imágenes RomFS extraídas (`<n>.app.romfs`). También funciona una carpeta con archivos `<title id>.romfs`.
-  - Cada fila de **Your Files** tiene un botón **Info** que explica a los evaluadores para qué sirve ese archivo (`gui.HELP`).
+  - Cada fila de **Tus archivos** tiene un botón **Info** que explica a los evaluadores para qué sirve ese archivo (`gui.HELP`).
   - Sin los datos Mii y la fuente compartida, ni la aplicación ni `pipeline.py` pueden compilar. Una versión de Miitopia creada sin ellos se detuvo en la consola con `[err:f] result c8804478`.
   - Si alguna compilación carece de uno de estos archivos, la pantalla de error del entorno de ejecución indica qué archivo falta.
 - Durante la compilación se necesita espacio libre equivalente a unas tres veces el tamaño del juego. Los archivos de trabajo se eliminan al finalizar.
