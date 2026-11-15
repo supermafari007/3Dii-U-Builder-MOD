@@ -199,7 +199,7 @@ def download(release, folder, progress=None, cancelled=None, opener=None):
                     break
                 done += len(piece)
                 if done > release.size:
-                    raise UpdateError('The download is bigger than the release says, so it was thrown away. Try again later.')
+                    raise UpdateError('La descarga supera el tamaño indicado por la versión publicada, por lo que se descartó. Vuelve a intentarlo más tarde.')
                 sha.update(piece)
                 f.write(piece)
                 if progress:
@@ -217,7 +217,7 @@ def download(release, folder, progress=None, cancelled=None, opener=None):
         raise
     except Exception as e:
         remove(part)
-        raise UpdateError(f'The download stopped: {e}. Check the connection and try again.')
+        raise UpdateError(f'La descarga se detuvo: {e}. Comprueba la conexión y vuelve a intentarlo.')
 
 
 def whole(path, release):
@@ -242,11 +242,11 @@ def verify(app):
         with open(os.path.join(app, '_internal', 'stamp.txt')) as f, open(os.path.join(app, 'engine', 'stamp.txt')) as g:
             same = f.read() == g.read()
     except (OSError, ValueError):
-        raise UpdateError('The update is incomplete: files the app needs are missing from it.')
+        raise UpdateError('La actualización está incompleta: faltan archivos que la aplicación necesita.')
     if not os.path.isfile(os.path.join(app, EXE)):
-        raise UpdateError('The update is incomplete: the app itself is missing from it.')
+        raise UpdateError('La actualización está incompleta: falta la propia aplicación.')
     if sum(len(fs) for _, _, fs in os.walk(app)) < want:
-        raise UpdateError('The update is incomplete: some of its files are missing. An antivirus may have removed them.')
+        raise UpdateError('La actualización está incompleta: faltan algunos archivos. Es posible que un antivirus los haya eliminado.')
     if not same:
         raise UpdateError('The update holds parts of two versions of the app, so it wasn\'t used.')
 
@@ -434,7 +434,7 @@ def activate(app):
                                          'failed': [t for t in failed_tags() if t != tag]}, 'new')
     if not written:
         raise UpdateError('The update couldn\'t be made the version to run: its folder can\'t be written to, or another window of the app is '
-                          'busy with it. Try again.')
+                          'utilizándola. Vuelve a intentarlo.')
     remove(os.path.join(home(), tag + '.zip'))
 
 
