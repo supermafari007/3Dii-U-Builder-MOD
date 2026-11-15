@@ -238,7 +238,7 @@ ApplicationWindow {
                         enabled: !win.busy
                         model: app.cards
                         textRole: "label"
-                        displayText: app.cards.length ? (app.destText || "Choose an SD card") : "No SD card found"
+                        displayText: app.cards.length ? (app.destText || "Selecciona una tarjeta SD") : "No se encontró ninguna tarjeta SD"
                         onActivated: (i) => app.pickCard(app.cards[i].path)
                     }
                     Button { text: "Volver a buscar"; enabled: !win.busy; onClicked: app.refreshCards() }
@@ -260,7 +260,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                         text: app.view === "building" ? (app.stage >= 0 && app.stage < app.stages.length ? app.stages[app.stage] + ": " : "") + app.detail
-                            : app.view === "failed" ? "The build stopped: " + app.resultText
+                            : app.view === "failed" ? "La compilación se detuvo: " + app.resultText
                             : app.view === "done" ? app.resultText : ""
                     }
                 }
@@ -278,7 +278,7 @@ ApplicationWindow {
                         wrapMode: TextArea.WrapAnywhere
                         font.family: T.mono
                         font.pixelSize: 12
-                        placeholderText: "What the build does shows here."
+                        placeholderText: "Aquí se mostrarán las acciones de la compilación."
                         onTextChanged: cursorPosition = length
                         background: Rectangle { color: win.palette.base; border.color: win.palette.mid }
                     }
@@ -306,7 +306,7 @@ ApplicationWindow {
         footer: RowLayout {  // plain buttons: app.dialog alone says when it shows, as in Main.qml
             Item { Layout.fillWidth: true }
             Button { objectName: "no"; text: app.dialog && app.dialog.no ? app.dialog.no : "No"; visible: !!(app.dialog && app.dialog.no); onClicked: app.answer(false) }
-            Button { objectName: "yes"; text: app.dialog ? app.dialog.yes : "OK"; onClicked: app.answer(true) }
+            Button { objectName: "yes"; text: app.dialog ? app.dialog.yes : "Aceptar"; onClicked: app.answer(true) }
             Item { Layout.preferredWidth: 4 }
         }
     }
