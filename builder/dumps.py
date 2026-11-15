@@ -65,7 +65,7 @@ def blz_decompress(data):
                 out[at] = data[index]
             control = (control << 1) & 0xFF
     if at > stop:
-        raise DumpError('The code didn\'t decompress: a damaged dump.')
+        raise DumpError('No se pudo descomprimir el código: el volcado está dañado.')
     return bytes(out)
 
 
@@ -115,7 +115,7 @@ def ncch(src):
     """a plain NCCH; an encrypted one is decrypt.py's job first"""
     nh = src.pread(0, 0x200)
     if nh[0x100:0x104] != b'NCCH' or not (nh[0x18F] & 4 or plain(src, nh)):
-        raise DumpError('This dump is still encrypted.')
+        raise DumpError('Este volcado todavía está cifrado.')
     return src
 
 
@@ -256,14 +256,14 @@ def extract_program(dump, out_dir, progress=None, romfs_name='romfs.bin'):
     nh = p.pread(0, 0x200)
     ex = p.pread(0x200, 0x800)
     if hashlib.sha256(ex[:0x400]).digest() != nh[0x160:0x180]:
-        raise DumpError('The extended header fails its hash: a bad decryption or a damaged dump.')
+        raise DumpError('El hash del encabezado extendido no coincide: el descifrado es incorrecto o el volcado está dañado.')
     files = exefs_files(p, nh)
     if '.code' not in files:
-        raise DumpError('This program has no code (.code missing from its ExeFS).')
+        raise DumpError('Este programa no contiene código (falta .code en su ExeFS).')
     code = blz_decompress(files['.code']) if ex[0xD] & 1 else files['.code']
     text, rodata, data = (struct.unpack_from('<III', ex, o) for o in (0x10, 0x20, 0x30))
     if len(code) < (text[1] + rodata[1]) * 0x1000 + data[2]:
-        raise DumpError('The code is shorter than its own layout says.')
+        raise DumpError('El código es más corto de lo que indica su propia estructura.')
     os.makedirs(os.path.join(out_dir, 'exefs'), exist_ok=True)
     for name, d in files.items():
         if name != '.code':
