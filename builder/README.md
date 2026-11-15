@@ -1,32 +1,32 @@
 # 3Dii U Builder
 
-Turns your own 3DS game dumps into games for your Wii U. Pick a game, say whether to add its update, DLC and a mod, press **Build It!**, and the game lands on your SD card ready for WUP Installer GX2.
+Convierte tus propios volcados de juegos de 3DS en juegos para Wii U. Elige un juego, indica si quieres incluir su actualización, DLC y algún mod, pulsa **Build It!** y el juego quedará en tu tarjeta SD, listo para instalarse con WUP Installer GX2.
 
-No game data and no keys come with the builder. Everything it builds from is yours: your dumps, your 3DS's keys if the dumps are encrypted, and your Wii U's `otp.bin`.
+Builder no incluye datos de juegos ni claves. Todo lo que utiliza es tuyo: tus volcados, las claves de tu 3DS si están cifrados y el archivo `otp.bin` de tu Wii U.
 
-## Using it
+## Cómo utilizarlo
 
-1. Open **`3Dii U Builder.exe`** in `dist/3Dii U Builder`. That folder is the whole app: copy it anywhere, as it needs no Python and no toolchain. To run the builder from the source instead, double-click `3Dii U Builder.pyw`.
-2. Click **Choose a game** (the big **+** tile, or Ctrl+O) and pick a dump. It can be a `.3ds`, `.cci`, `.cia`, `.cxi` or `.app` file, encrypted or already decrypted. The tile shows the game's art, and under it its name and maker, and a badge says how well it's known to run: **Complete on Wii U** for a finished game, **Plays on Wii U** for the other tested games, **Untested** for the rest.
-3. The builder then asks about the **update** and the **DLC**, right in its window:
-   - If they're in the same folder as the game, it names them and asks whether to use them.
-   - If not, it asks whether you have them, and lets you pick the files.
-   - You can change or remove either later, under **Extras**.
-   - Then it asks about a **mod** (see [Mods](#mods)): pick its `.zip` or its folder. **Extras** has it too.
-4. **Your Files**: the lights turn cyan when the builder has what it needs.
-   - **3DS keys** are only needed for encrypted dumps. The builder decrypts them the way `cia_to_decrypted_3ds.py` does: makerom turns a game's CIA into a `.3ds`, then pyctr decrypts it, with `boot9.bin` and `seeddb.bin` from your own 3DS. It looks for them in `.3ds` in your user folder (`C:\Users\<you>\.3ds`), pyctr's own place; choose another folder if yours are elsewhere. GodMode9 can dump both from a 3DS.
-   - **Wii U otp.bin** comes from your own console's NAND backup. The WUP is packed with the key inside it; the builder never shows or stores that key.
-5. **Put it on**: your SD card (cards set up for a Wii U come first), or a folder.
-6. **Build It!** It takes a while, longer for bigger games: the game's code is recompiled for the Wii U and its shaders are compiled ahead of time. You see each stage tick off. Your PC stays usable meanwhile, **Cancel** stops it cleanly, and **Details** shows everything the build prints.
-7. Put the card in your Wii U and install with **WUP Installer GX2**. If you installed an older build of the same game, delete that one first (System Settings, Data Management), then install the new one.
+1. Abre **`3Dii U Builder.exe`** en `dist/3Dii U Builder`. Esa carpeta contiene toda la aplicación: puedes copiarla donde quieras, ya que no necesita Python ni una cadena de herramientas instalada. Para ejecutar Builder desde el código fuente, haz doble clic en `3Dii U Builder.pyw`.
+2. Pulsa **Choose a game** (el recuadro grande con el símbolo **+**, o Ctrl+O) y selecciona un volcado. Puede ser un archivo `.3ds`, `.cci`, `.cia`, `.cxi` o `.app`, cifrado o descifrado. El recuadro muestra la imagen del juego y, debajo, su nombre y desarrollador. Una etiqueta indica qué tan bien se sabe que funciona: **Complete on Wii U** para un juego terminado, **Plays on Wii U** para los demás juegos probados y **Untested** para el resto.
+3. Builder te preguntará por la **actualización** y el **DLC** directamente en su ventana:
+   - Si están en la misma carpeta que el juego, mostrará sus nombres y preguntará si quieres utilizarlos.
+   - Si no están allí, preguntará si los tienes y te permitirá seleccionar los archivos.
+   - Más adelante puedes cambiar o quitar cualquiera de ellos desde **Extras**.
+   - Después preguntará por un **mod** (consulta [Mods](#mods)): selecciona su archivo `.zip` o su carpeta. También puedes gestionarlo desde **Extras**.
+4. **Your Files**: los indicadores se vuelven cian cuando Builder dispone de todo lo necesario.
+   - **3DS keys** solo se necesitan para volcados cifrados. Builder los descifra siguiendo el procedimiento de `cia_to_decrypted_3ds.py`: makerom convierte la CIA del juego en un archivo `.3ds` y después pyctr lo descifra, utilizando `boot9.bin` y `seeddb.bin` de tu propia 3DS. Los busca en la carpeta `.3ds` de tu usuario (`C:\\Users\\<you>\\.3ds`), que es la ubicación propia de pyctr. Si los tienes en otro lugar, selecciona esa carpeta. GodMode9 puede extraer ambos archivos de una 3DS.
+   - **Wii U otp.bin** proviene de una copia de seguridad de la NAND de tu propia consola. El WUP se empaqueta con la clave que contiene; Builder nunca muestra ni almacena esa clave.
+5. **Put it on**: elige tu tarjeta SD (las tarjetas preparadas para Wii U aparecen primero) o una carpeta.
+6. **Build It!**: el proceso tarda un tiempo, especialmente con juegos grandes. El código del juego se recompila para Wii U y sus shaders se compilan por adelantado. Verás cómo se completa cada etapa. Mientras tanto, puedes seguir usando el PC; **Cancel** detiene el proceso de forma segura y **Details** muestra todo lo que imprime la compilación.
+7. Inserta la tarjeta en tu Wii U e instala el juego con **WUP Installer GX2**. Si ya habías instalado una versión anterior del mismo juego, elimínala primero (Configuración de la consola, Gestión de datos) y luego instala la nueva.
 
-**Games** in the bar on the left holds the games you picked before and lists the games tested on a real Wii U; **Help** answers questions about what you need, and holds the version, the update check and the light or dark look.
+La sección **Games**, en la barra izquierda, conserva los juegos que seleccionaste anteriormente y muestra los que se han probado en una Wii U real. **Help** responde preguntas sobre los requisitos y contiene la versión, la comprobación de actualizaciones y la opción de apariencia clara u oscura.
 
-Saves live in the game's own save storage on the console, like any installed game. They show up in Data Management.
+Las partidas se guardan en el almacenamiento de guardado propio del juego en la consola, igual que en cualquier juego instalado. Puedes verlas en Gestión de datos.
 
-## Which games work
+## Compatibilidad de juegos
 
-`compat.json` lists the games tested on a real Wii U. They build with the same title IDs as the builds already handed out, so a rebuild replaces the old one. All of these play:
+`compat.json` enumera los juegos probados en una Wii U real. Se compilan con los mismos identificadores de título que las versiones distribuidas anteriormente, por lo que volver a compilar uno reemplaza la versión antigua. Los siguientes juegos funcionan:
 
 - Tomodachi Life
 - New Super Mario Bros. 2
@@ -38,89 +38,93 @@ Saves live in the game's own save storage on the console, like any installed gam
 - Professor Layton and the Azran Legacy
 - Professor Layton and the Miracle Mask
 
-Any other game builds as **untested**. It gets a title ID of its own (`000500003Dxxxxxx`, kept clear of real Wii U titles), and code finders run on it, but nobody has played it yet: it may not start, or it may stop partway.
+Cualquier otro juego se compila como **sin probar**. Recibe su propio identificador de título (`000500003Dxxxxxx`, reservado para evitar conflictos con títulos reales de Wii U) y se ejecutan las herramientas de búsqueda de código, pero todavía nadie lo ha jugado: puede que no inicie o que se detenga a mitad de la ejecución.
 
-**Updates and DLC** are read the way a 3DS reads them:
-- An update brings its own code and its own RomFS, which the game lays over the original files itself.
-- DLC brings one RomFS per content, which the game finds through the same calls it makes on a 3DS.
-- The nine tested games were tested without updates, so with one they count as untested too.
+**Las actualizaciones y el DLC** se leen de la misma manera que en una 3DS:
+
+- Una actualización aporta su propio código y su propio RomFS, que el juego superpone a los archivos originales.
+- El DLC aporta un RomFS por cada contenido; el juego lo encuentra mediante las mismas llamadas que realiza en una 3DS.
+- Los nueve juegos probados se probaron sin actualizaciones. Por tanto, si les agregas una, también pasan a considerarse sin probar.
 
 ## Mods
 
-Mods made for Luma3DS on a 3DS work as they come: a `.zip` or a folder with `luma/titles/<title id>/` inside (or just that folder's contents). The builder puts the mod into the game before recompiling it, so a mod's code runs as recompiled code, like the game's own.
-- `romfs/`: files that replace the game's files or add new ones, as Luma's LayeredFS does. Names match whatever their case, as they do on the SD card. A file the game's update also has goes into the update's files, which the game reads first.
-- `code.ips` or `code.bps`: a patch to the game's code. A BPS patch made for another version of the code (another region, or with or without the update) is refused with that reason.
-- `code.bin`: the whole code, replaced. `exheader.bin`: the extended header, for a mod that changes the code's size.
-- A mod that changes code, or the CRO modules some games keep most of their code in, has the code finders look again. For a tested game, they add to what its tested builds found.
-- The title folder must match the game: a mod for another region or edition is refused, naming the title IDs it's for. With an update installed, Luma mods use the game's own title ID, and so does the builder.
-- Plugins (`luma/plugins/<id>/*.3gx`, which is how CTGP-7 runs) aren't mods of this kind. They change the game in memory while it runs, and recompiled code never reads its ARM code again, so they can't be built in.
-- With a mod, every game counts as untested.
+Los mods creados para Luma3DS en una 3DS funcionan directamente: puedes usar un archivo `.zip` o una carpeta que contenga `luma/titles/<title id>/` (o solamente el contenido de esa carpeta). Builder incorpora el mod al juego antes de recompilarlo, por lo que el código del mod se ejecuta como código recompilado, igual que el del propio juego.
 
-`python builder/pipeline.py --mod <zip or folder>` takes several mods, applied in order, each over the last.
+- `romfs/`: archivos que reemplazan los del juego o agregan otros nuevos, como hace LayeredFS de Luma. Los nombres de archivo no distinguen mayúsculas de minúsculas, igual que en la tarjeta SD. Si un archivo también existe en la actualización del juego, se incorpora a los archivos de la actualización, que son los que el juego lee primero.
+- `code.ips` o `code.bps`: parche para el código del juego. Si un parche BPS fue creado para otra versión del código (otra región, o con o sin actualización), se rechaza y se indica el motivo.
+- `code.bin`: reemplaza el código completo. `exheader.bin`: encabezado extendido, necesario para un mod que cambie el tamaño del código.
+- Si un mod modifica el código o los módulos CRO donde algunos juegos guardan la mayor parte de su código, se vuelve a ejecutar la búsqueda de código. En un juego probado, los resultados se suman a los encontrados en sus compilaciones de prueba.
+- La carpeta del título debe corresponder al juego: si el mod es de otra región o edición, se rechaza y se indican los identificadores de título para los que fue creado. Cuando hay una actualización instalada, los mods de Luma utilizan el identificador de título propio del juego, y Builder hace lo mismo.
+- Los plugins (`luma/plugins/<id>/*.3gx`, como los que utiliza CTGP-7) no son mods de este tipo. Modifican el juego en memoria mientras se ejecuta, y el código recompilado nunca vuelve a leer su código ARM; por eso no pueden incorporarse a la compilación.
+- Al utilizar un mod, cualquier juego pasa a considerarse sin probar.
 
-## What it needs on the PC
+`python builder/pipeline.py --mod <zip or folder>` permite aplicar varios mods, en orden y cada uno sobre el resultado del anterior.
 
-Windows 10 or 11 for now (Linux is planned):
-- **The standalone app needs nothing else.**
-  - It carries its own Python, Qt, pyctr and makerom.
-  - Its `engine` folder holds the rest: the recompiler, the runtime's sources, devkitPro's PowerPC toolchain with wut, the CafeGLSL shader compiler, and a ready-built shader generator.
-  - It builds in `%LOCALAPPDATA%\3Dii U Builder`, which keeps the compiled runtime for the next game.
-  - Beside it, `objcache` keeps up to 2 GB of compiled game code by what went into it (`tools/win/objcache.py`). A game built again by a newer app, or with its update, then compiles only the files whose code changed.
-- A game's art comes from the web when the game is picked (`covers.py`); the user's own pictures, one for the start-up screens and one for the icon (the Art pill's menu), or removing them override it. The same menu takes a GamePad bezel, a picture the build scales to 854x480 (`make_game_title.bezel_pixels`), which the GamePad shows beside the screens in place of black. It also takes a GamePad start-up picture of the game's own (`--pad-art`, shown as it is) and a start-up sound for that game alone (`--boot-sound`, a .btsnd in the work folder's `boot_sounds`).
-  - With the user's SteamGridDB key (Help page, "Art and sound"; kept in `settings.json`, never in the repository): a wide banner for the start-up screens and a square icon for the Wii U Menu, found by the game's name, or by its other regions' names where SteamGridDB doesn't know this one (Luigi's Mansion 2 is Dark Moon there).
-  - Without a key, or where SteamGridDB has nothing: the cover from GameTDB, by the product code's four letters.
-  - GameTDB's list of 3DS games (`3dstdb.zip`), fetched once, gives the year a game came out, for the Virtual Console's start-up screens (a build goes on without a year if it can't be had), and its names in other regions.
-- The start-up sound is the user's own too (Help page, "Art and sound", a WAV file): `tools/make_boot_sound.py` turns it into `boot_sound.btsnd` in the work folder, and every title built after carries it, unless the game has a sound of its own.
-- The 3DS system archives (its shared font and Mii data) don't come with it: they're your own 3DS's files.
-  - The builder copies them from Azahar's or Citra's user folder, or from any folder holding a 3DS NAND up to three levels down in Downloads, Desktop or Documents, whatever it's called. It keeps them in its work folder.
-  - Off a 3DS, GodMode9 copies `title/0004009b` (font, Mii data) and `title/000400db` (the bad-word list) out of `[1:] SYSNAND CTRNAND`; the user picks either folder (or the one holding them) with "Folder". A build stops if the game's code names an archive the files lack (`dumps.archives_named`): Tomodachi Life stops at start without the word list. Azahar gets them with File > Set Up System Files and the Artic Setup Tool.
-  - The NAND's contents may be NCCH (`<n>.app`, encrypted as on the 3DS or not) or RomFS images already taken out (`<n>.app.romfs`). A folder of `<title id>.romfs` files works too.
-  - Each row under "Your Files" has an "Info" button that explains its file to testers (`gui.HELP`).
-  - Without the Mii data and the shared font, the app and `pipeline.py` won't build. A Miitopia built without them stopped on the console with `[err:f] result c8804478`.
-  - If a build ever lacks one, the runtime's error screen names the missing archive.
-- Free disk space of about three times the game's size while it builds. Work files are deleted at the end.
-- From the source: Python 3.10 or newer, `pip install PySide6-Essentials pyctr pycryptodome` once, and the build tools `tools/win/build3ds.py` uses. Install each once:
-  - devkitPro's PowerPC toolchain and wut, from `tools/win/install_toolchain.sh`, into `C:\devkitPro`.
-  - LLVM, in `C:\Program Files\LLVM`.
-  - MSYS2's `mingw-w64-x86_64-gcc`, in `C:\msys64`.
-  - The CafeGLSL shader compiler, from `tools/win/build_cafeglsl.ps1`.
+## Requisitos en el PC
 
-## How it works
+Por ahora se necesita Windows 10 u 11 (Linux está previsto):
 
-- The window is Qt Quick: `ui/Main.qml` draws it (Wii U Menu glass laid out on a 1280x720 surface scaled to the window, light and dark, the in-window questions, the update card), `ui/Simple.qml` is the plainer window the About card can switch to and back from (the same `app`, one window at a time), and `gui.py` holds what it shows and does what its buttons ask. A choice that asks several things is a generator that yields each question.
-- `app.py` is the one program: the window, the build when run with `--pipeline`, and `python.exe`'s part for the repository's tool scripts the build runs. In the standalone app, the build's compilers start without console windows.
-- `make_app.py` builds the standalone app with PyInstaller (`python builder/make_app.py`, on a PC with the build tools above).
-  - It leaves out the parts of Qt the window never loads.
-  - It puts the engine beside the app, in this repository's own layout. That includes what runs of the games learned: where their code starts, and the render states they met.
-  - None of the games' code goes in. A run's shader log keeps each vertex record's whole shader memory, which is the game's own code. So `shaderlogs.py` ships each record as a fingerprint of the program of the game's DVLB it ran, beside the log in a `.vsf` file, and a build finds the program in the user's own dump again (dvlb.bin). Checked on the nine games: the shader generator makes the same shaders from these as from the full logs, except that it declares fewer unused inputs.
-  - A memory no DVLB program starts ships as a recipe instead (`.vsr`): where its words lie in the game's own `code.bin` and `romfs.bin`, or in a romfs file once unpacked (Yaz0, LZ10, LZ11). The build lays it out from the user's dump and checks it against the record's fingerprint, so another version of the game just leaves it out. Short runs must lie near long ones, so a recipe can't spell code out of coincidences.
-    - The Mario & Luigi engine keeps a shader as plain words in its `code.bin` and loads a romfs program after it. That's 115 records the app used to leave out, and all of them come back now.
-    - For a game this repository keeps no dump of, `python builder/shaderlogs.py --recipes <extracted game folder> games/g_<code>/shader_logs` writes its `recipes.vsr`, which the app ships.
-  - A game `compat.json` calls Complete also ships `confirmed.bin`: every fragment state the build it was confirmed with compiled ahead. A build compiles that list first, whatever its other logs hold (only a `--cold` build, which takes nothing a run learned, goes without it). Without it a later app could drop some of them: the states a build guesses beyond the logs are picked up to a limit, in an order that one more logged state changes (56 guesses out and 12 in for NSMB2, from a single new record). After a game is confirmed finished on a console, `python builder/shaderlogs.py --confirm <that build's shader_logs> games/<slug>/shader_logs` writes the list (a Builder build keeps its folder with `--keep`), and `make_app.py` won't make an app with a Complete game that has none.
-  - A record still left out is drawn the CPU way on the console. Most of those are another game's, from a console log that collects every game: NSMB2's 17, for one, which NSMB2 never draws.
-  - For an untested game built from the source, the build leaves its `dvlb.bin` where its runs' logs go (`games/g_<code>/shader_logs`), so the next app can fingerprint them. The console tools (`tools/console_*`), with this PC's paths and its console's address, stay out.
-  - It ends with `dist/3Dii U Builder <version> beta.zip` for testers: the app folder with `Read me first.txt` (`app_readme.txt`) and `Third-party notices.txt` (`app_notices.txt`). A new build replaces the old zip.
-  - It writes how many files the app has to `_internal/files.txt`. Before Qt loads, `app.py` counts them again: a zip unpacked only in part (Windows' Extract All stops at a path too long for it, or an antivirus takes a file) gets a message to unzip again into a short folder, instead of a Python traceback. Only the Basic style of Qt Quick Controls ships, which keeps the deepest path in the zip at 121 characters.
-  - The app finds that engine, points `tools/win/build3ds.py` at its devkitPro and shader generator, and builds in the user's folder (`THREEDII_ROOT`, `THREEDII_DEVKITPRO`, `THREEDII_SHADERGEN`, `THREEDII_WORK`). Run from the source, none of these are set and everything stays in the repository.
-  - devkitPPC's compiler can't open a file whose path passes 260 characters, and it reaches its headers by long relative paths. So the app builds through a directory junction, `%LOCALAPPDATA%\3Dii U Builder\engine`, pointing at its own engine folder. It works wherever the app is kept, and is made again if the app moves.
-  - The work folder keeps the compiled runtime for the next game. A newer app's sources can be older than what an earlier app compiled there, so when the engine changes (its `stamp.txt`), the compiled runtime starts over.
-  - An error in a build is printed to the log and ends it; the standalone app never stops in a message box of its own.
-- `decrypt.py` makes encrypted dumps plain first, with `cia_to_decrypted_3ds.py`, the converter this builder was designed around:
-  - A game's CIA: `makerom -ciatocci`, then pyctr decrypts every partition of the `.3ds` it makes, in place.
-  - An encrypted `.3ds`: the same pyctr step, on a copy, so your dump is never changed.
-  - An update's CIA: pyctr alone. makerom won't make a card image from an update ("This CIA cannot be converted to CCI").
-  - DLC: pyctr alone, content by content.
-  - Seeds for games from firmware 9.6 on come from `seeddb.bin`.
-- `dumps.py` reads the plain dump and checks every part against the hashes in its own header. A bad decryption or a damaged dump stops the build there, before anything is built. Dumps that were decrypted by another tool but still carry their "encrypted" flags are recognised by those same hashes.
-- `pipeline.py` does the rest, in folders of its own (`builder_work/`, `build_win_builder/`):
-  1. Unpacks the game, its update and its DLC, then puts the mods in (`mods.py`: IPS and BPS patches, and a RomFS writer that rebuilds each of the nine tested games' RomFS byte for byte the same when nothing changes).
-  2. Recompiles the code with `tools/win/build3ds.py` and compiles the shaders.
-  3. Assembles the title with `tools/make_game_title.py`.
-  4. Packs it with `tools/pack_game_wup.py`.
-  5. Copies it to the card, compares every file, and replaces the old copy only once the new one checks out.
+- **La aplicación independiente no necesita nada más.**
+  - Incluye su propio Python, Qt, pyctr y makerom.
+  - Su carpeta `engine` contiene el resto: el recompilador, el código fuente del entorno de ejecución, la cadena de herramientas PowerPC de devkitPro con wut, el compilador de shaders CafeGLSL y un generador de shaders ya compilado.
+  - Compila en `%LOCALAPPDATA%\3Dii U Builder`, donde conserva el entorno de ejecución compilado para el siguiente juego.
+  - Junto a él, `objcache` conserva hasta 2 GB de código de juegos compilado, clasificado según sus entradas (`tools/win/objcache.py`). Si vuelves a compilar un juego con una versión más reciente de la aplicación o con su actualización, solo se recompilan los archivos cuyo código haya cambiado.
+- Las imágenes de los juegos se obtienen de Internet al seleccionar cada juego (`covers.py`). Puedes sustituirlas por imágenes propias —una para las pantallas de inicio y otra para el icono— desde el menú de la etiqueta **Art**, o quitarlas para utilizar el icono propio del juego. Ese mismo menú permite elegir un marco para el GamePad: una imagen que la compilación ajusta a 854x480 (`make_game_title.bezel_pixels`) y que el GamePad muestra junto a las pantallas, en lugar del fondo negro. También admite una imagen de inicio exclusiva para el GamePad (`--pad-art`, que se muestra tal cual) y un sonido de inicio exclusivo para ese juego (`--boot-sound`, un archivo .btsnd en la carpeta de trabajo `boot_sounds`).
+  - Si introduces tu clave de SteamGridDB (página Help, sección «Art and sound»; se guarda en `settings.json`, nunca en el repositorio), se busca un banner panorámico para las pantallas de inicio y un icono cuadrado para el menú de Wii U. La búsqueda utiliza el nombre del juego o los nombres de otras regiones cuando SteamGridDB no reconoce la edición seleccionada (por ejemplo, allí Luigi's Mansion 2 aparece como Dark Moon).
+  - Si no hay una clave o SteamGridDB no encuentra imágenes, se utiliza la portada de GameTDB, mediante las cuatro letras del código de producto.
+  - La lista de juegos de 3DS de GameTDB (`3dstdb.zip`), que se descarga una sola vez, proporciona el año de lanzamiento para las pantallas de inicio de Virtual Console (si no se encuentra, la compilación continúa sin ese año) y los nombres del juego en otras regiones.
+- El sonido de inicio también es propio del usuario (página Help, sección «Art and sound», archivo WAV): `tools/make_boot_sound.py` lo convierte en `boot_sound.btsnd` dentro de la carpeta de trabajo. Todos los títulos compilados posteriormente lo incluyen, salvo que el juego ya tenga su propio sonido.
+- Los archivos del sistema de 3DS (fuente compartida y datos Mii) no se incluyen: debes aportar los de tu propia 3DS.
+  - Builder los copia desde la carpeta de usuario de Azahar o Citra, o desde cualquier carpeta que contenga una NAND de 3DS hasta tres niveles de profundidad dentro de Descargas, Escritorio o Documentos, independientemente del nombre de la carpeta. Los conserva en su carpeta de trabajo.
+  - Desde una 3DS, GodMode9 permite copiar `title/0004009b` (fuente y datos Mii) y `title/000400db` (lista de palabras prohibidas) desde `[1:] SYSNAND CTRNAND`. En Builder, selecciona cualquiera de esas carpetas (o la carpeta que las contiene) con «Folder». La compilación se detiene si el código del juego solicita un archivo que no está disponible (`dumps.archives_named`): Tomodachi Life, por ejemplo, no inicia sin la lista de palabras. Azahar obtiene estos archivos mediante File > Set Up System Files y Artic Setup Tool.
+  - El contenido de la NAND puede estar en formato NCCH (`<n>.app`, cifrado como en la 3DS o ya descifrado) o como imágenes RomFS extraídas (`<n>.app.romfs`). También funciona una carpeta con archivos `<title id>.romfs`.
+  - Cada fila de **Your Files** tiene un botón **Info** que explica a los evaluadores para qué sirve ese archivo (`gui.HELP`).
+  - Sin los datos Mii y la fuente compartida, ni la aplicación ni `pipeline.py` pueden compilar. Una versión de Miitopia creada sin ellos se detuvo en la consola con `[err:f] result c8804478`.
+  - Si alguna compilación carece de uno de estos archivos, la pantalla de error del entorno de ejecución indica qué archivo falta.
+- Durante la compilación se necesita espacio libre equivalente a unas tres veces el tamaño del juego. Los archivos de trabajo se eliminan al finalizar.
+- Para compilar desde el código fuente: Python 3.10 o posterior, instalar una vez `pip install PySide6-Essentials pyctr pycryptodome` y disponer de las herramientas que utiliza `tools/win/build3ds.py`. Instala cada una una sola vez:
+  - La cadena de herramientas PowerPC de devkitPro y wut, mediante `tools/win/install_toolchain.sh`, en `C:\devkitPro`.
+  - LLVM, en `C:\Program Files\LLVM`.
+  - MSYS2 con `mingw-w64-x86_64-gcc`, en `C:\msys64`.
+  - El compilador de shaders CafeGLSL, mediante `tools/win/build_cafeglsl.ps1`.
 
-  It runs on its own too: `python builder/pipeline.py --help`.
-- In the runtime:
-  - `services/fs.cpp` serves the update's RomFS (`update_romfs.bin`, SelfNCCH path type 5) and the DLC's (`dlc_<content index>.romfs`, archive 0x2345678A for `0004008C` title IDs).
-  - `services/misc.cpp`'s `am:app` answers the add-on content calls from `dlc_contents.bin`, `dlc_title.bin`, `dlc_ticket.bin` and `update_title.bin`.
-  - The GPU-timeout fix (`services/gsp.cpp`) finds nngxSetTimeout in whatever code is loaded, so updated code and new games get it too.
+## Cómo funciona
+
+- La ventana utiliza Qt Quick: `ui/Main.qml` la dibuja (aspecto de cristal del menú de Wii U, distribuido en una superficie de 1280x720 que se escala a la ventana, temas claro y oscuro, preguntas dentro de la ventana y tarjeta de actualización). `ui/Simple.qml` es una ventana más sencilla a la que la tarjeta About puede cambiar y desde la que puede volver (es la misma instancia de `app`, con una sola ventana a la vez). `gui.py` mantiene el estado de la interfaz y ejecuta las acciones de sus botones. Una opción que requiere varias respuestas es un generador que presenta cada pregunta sucesivamente.
+- `app.py` es el programa principal: muestra la ventana, ejecuta la compilación cuando se inicia con `--pipeline` y proporciona la parte de `python.exe` que necesitan los scripts de herramientas del repositorio. En la aplicación independiente, los compiladores se inician sin abrir ventanas de consola.
+- `make_app.py` crea la aplicación independiente con PyInstaller (`python builder/make_app.py`, en un PC con las herramientas de compilación indicadas).
+  - Excluye las partes de Qt que la ventana nunca carga.
+  - Coloca el motor junto a la aplicación, respetando la estructura de este repositorio. Incluye también lo aprendido durante las ejecuciones de los juegos: dónde comienza su código y qué estados de renderizado se encontraron.
+  - No incluye código de los juegos. Los registros de shaders de una ejecución contienen la memoria completa de shaders de cada registro de vértices, que es código propio del juego. Por eso `shaderlogs.py` distribuye cada registro como una huella digital del programa DVLB utilizado, junto al registro en un archivo `.vsf`; durante la compilación, el programa se vuelve a localizar en el volcado propio del usuario (`dvlb.bin`). En los nueve juegos comprobados, el generador de shaders produce los mismos shaders que los registros completos, salvo que declara menos entradas sin uso.
+  - Si una memoria no comienza con un programa DVLB, se distribuye una receta (`.vsr`) que indica dónde están sus palabras dentro del `code.bin` y `romfs.bin` del juego, o en un archivo romfs una vez descomprimido (Yaz0, LZ10, LZ11). La compilación reconstruye el contenido desde el volcado del usuario y lo comprueba contra la huella del registro; si se trata de otra versión del juego, simplemente lo omite. Las ejecuciones cortas deben coincidir con las largas, para que una receta no pueda describir código a partir de coincidencias casuales.
+    - El motor de Mario & Luigi conserva un shader como palabras sin procesar en su `code.bin` y carga después un programa desde romfs. Son 115 registros que la aplicación antes omitía y que ahora se recuperan.
+    - Para un juego del que este repositorio no conserva ningún volcado, `python builder/shaderlogs.py --recipes <extracted game folder> games/g_<code>/shader_logs` genera su archivo `recipes.vsr`, que la aplicación incluye.
+  - Un juego que `compat.json` marque como Complete también incluye `confirmed.bin`: todos los estados de fragmentos que se compilaron por adelantado en la versión confirmada. La compilación procesa primero esa lista, independientemente de los demás registros (solo una compilación `--cold`, que no utiliza información aprendida durante una ejecución, prescinde de ella). Sin esa lista, una versión posterior de la aplicación podría omitir algunos estados: los estados que se infieren más allá de los registros se limitan y su orden puede cambiar al añadirse un solo estado registrado (en NSMB2, un nuevo registro hizo que salieran 56 estimaciones y entraran 12). Una vez confirmado que un juego está terminado en una consola, `python builder/shaderlogs.py --confirm <that build's shader_logs> games/<slug>/shader_logs` genera la lista (una compilación de Builder conserva su carpeta con `--keep`), y `make_app.py` no crea una aplicación con un juego Complete si falta esa lista.
+  - Los registros que aún se omiten se dibujan mediante la CPU en la consola. La mayoría pertenecen a otro juego, porque el registro de consola recopila información de todos los juegos: por ejemplo, NSMB2 tiene 17 que nunca llega a dibujar.
+  - Para un juego sin probar compilado desde el código fuente, la compilación deja su `dvlb.bin` en la carpeta donde se guardan los registros de ejecución (`games/g_<code>/shader_logs`), para que la siguiente aplicación pueda generar sus huellas. Las herramientas de consola (`tools/console_*`), que contienen rutas de este PC y la dirección de su consola, se excluyen.
+  - El proceso termina con `dist/3Dii U Builder <version> beta.zip` para los evaluadores: la carpeta de la aplicación con `Read me first.txt` (`app_readme.txt`) y `Third-party notices.txt` (`app_notices.txt`). Una nueva compilación reemplaza el ZIP anterior.
+  - Escribe la cantidad de archivos de la aplicación en `_internal/files.txt`. Antes de cargar Qt, `app.py` vuelve a contarlos: si el ZIP se extrajo solo parcialmente (por ejemplo, porque «Extraer todo» de Windows se detuvo ante una ruta demasiado larga o porque un antivirus eliminó un archivo), muestra un mensaje para volver a extraerlo en una carpeta con una ruta más corta, en vez de presentar un traceback de Python. Solo se incluye el estilo Basic de Qt Quick Controls, lo que limita a 121 caracteres la ruta más profunda del ZIP.
+  - La aplicación localiza ese motor, indica a `tools/win/build3ds.py` dónde están devkitPro y el generador de shaders, y compila en la carpeta del usuario (`THREEDII_ROOT`, `THREEDII_DEVKITPRO`, `THREEDII_SHADERGEN`, `THREEDII_WORK`). Al ejecutarse desde el código fuente, estas variables no se definen y todo permanece dentro del repositorio.
+  - El compilador de devkitPPC no puede abrir archivos cuya ruta supere los 260 caracteres, y accede a sus encabezados mediante rutas relativas largas. Por eso la aplicación compila a través de un vínculo de directorio en `%LOCALAPPDATA%\3Dii U Builder\engine`, que apunta a la carpeta del motor incluida en la aplicación. Funciona independientemente de dónde se encuentre la aplicación y se vuelve a crear si esta se mueve.
+  - La carpeta de trabajo conserva el entorno de ejecución compilado para el siguiente juego. Como los archivos fuente de una versión nueva pueden ser anteriores a lo que compiló una versión previa, cuando cambia el motor (su `stamp.txt`) se vuelve a compilar el entorno desde cero.
+  - Si ocurre un error, se imprime en el registro y la compilación termina; la aplicación independiente no muestra por su cuenta un cuadro de mensaje.
+- `decrypt.py` descifra primero los volcados cifrados mediante `cia_to_decrypted_3ds.py`, el conversor para el que se diseñó Builder:
+  - CIA de un juego: `makerom -ciatocci` y después pyctr descifra, en el mismo lugar, todas las particiones del archivo `.3ds` generado.
+  - `.3ds` cifrado: se aplica el mismo paso de pyctr sobre una copia, para no modificar nunca el volcado original.
+  - CIA de una actualización: solo pyctr. makerom no puede crear una imagen de cartucho a partir de una actualización («This CIA cannot be converted to CCI»).
+  - DLC: solo pyctr, contenido por contenido.
+  - Las semillas de los juegos que utilizan firmware 9.6 o posterior se obtienen de `seeddb.bin`.
+- `dumps.py` lee el volcado descifrado y comprueba cada parte frente a los hashes de su propio encabezado. Un descifrado incorrecto o un volcado dañado detiene la compilación antes de generar nada. Los volcados descifrados con otra herramienta que aún conservan las marcas de «cifrado» también se reconocen mediante esos mismos hashes.
+- `pipeline.py` ejecuta el resto del proceso en sus propias carpetas (`builder_work/`, `build_win_builder/`):
+  1. Descomprime el juego, su actualización y su DLC, y después incorpora los mods (`mods.py`: parches IPS y BPS, y un escritor RomFS que reconstruye exactamente, byte por byte, el RomFS de cada uno de los nueve juegos probados cuando no hay cambios).
+  2. Recompila el código con `tools/win/build3ds.py` y compila los shaders.
+  3. Ensambla el título con `tools/make_game_title.py`.
+  4. Lo empaqueta con `tools/pack_game_wup.py`.
+  5. Lo copia a la tarjeta, compara todos los archivos y reemplaza la copia anterior solo cuando la nueva supera las comprobaciones.
+
+También se puede ejecutar por separado: `python builder/pipeline.py --help`.
+
+- En el entorno de ejecución:
+  - `services/fs.cpp` proporciona el RomFS de la actualización (`update_romfs.bin`, tipo de ruta SelfNCCH 5) y el del DLC (`dlc_<content index>.romfs`, archivo 0x2345678A para identificadores de título `0004008C`).
+  - `services/misc.cpp` implementa las respuestas de `am:app` a las llamadas de contenido adicional, a partir de `dlc_contents.bin`, `dlc_title.bin`, `dlc_ticket.bin` y `update_title.bin`.
+  - La corrección del tiempo de espera de la GPU (`services/gsp.cpp`) localiza nngxSetTimeout en cualquier código que se haya cargado, por lo que también se aplica al código actualizado y a juegos nuevos.
