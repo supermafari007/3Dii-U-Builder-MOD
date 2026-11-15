@@ -212,7 +212,7 @@ def main():
     if problem:
         fail(problem)
 
-    PROGRESS.stage('Reading your game')
+    PROGRESS.stage('Leyendo el juego')
     decrypt.use_keys(a.keys)
     try:
         game = dumps.Dump(a.game)
@@ -253,7 +253,7 @@ def main():
     if shutil.disk_usage(WORK_GAMES).free < need:
         fail(f'Espacio libre insuficiente: esta compilación necesita aproximadamente {need >> 30} GB en la unidad donde está {WORK}.')
 
-    PROGRESS.stage('Decrypting')
+    PROGRESS.stage('Descifrando')
     for d in (game_dir, tmp):
         shutil.rmtree(d, ignore_errors=True)
         os.makedirs(d)
@@ -264,7 +264,7 @@ def main():
         if dlc:
             sources = decrypt.dlc_contents(dlc.path, tmp) if dlc.encrypted() else dumps.plain_dlc_sources(dlc, tmp)
 
-        PROGRESS.stage('Unpacking')
+        PROGRESS.stage('Extrayendo archivos')
         dumps.extract_program(plain[game], game_dir, lambda d, t: PROGRESS.at(d / t * (0.6 if extras else 1)))
         if update:
             info_u = dumps.add_update(update, plain[update], game_dir, lambda d, t: PROGRESS.at(0.6 + d / t * 0.2))
@@ -370,7 +370,7 @@ def main():
 
     alongside = threading.Thread(target=shaders, daemon=True)
     try:
-        PROGRESS.stage('Recompiling')
+        PROGRESS.stage('Recompilando')
         alongside.start()
         b3.build_code(g, args)
         PROGRESS.stage('Shaders')
@@ -387,7 +387,7 @@ def main():
         os.makedirs(learned, exist_ok=True)  # shipped logs' vertex records by them (shaderlogs.py), and ships no dvlb.bin
         shutil.copyfile(dvlb, os.path.join(learned, 'dvlb.bin'))
 
-    PROGRESS.stage('Making the title')
+    PROGRESS.stage('Creando el título')
     released, case_scan = '', False
     if a.art and a.art_style == 'console' and a.tdb:
         import covers  # only here: the one download a build may make, and only with the Virtual Console's screens chosen
@@ -408,7 +408,7 @@ def main():
         print(f'@done {out}', flush=True)
         return
 
-    PROGRESS.stage('Packing the WUP')
+    PROGRESS.stage('Empaquetando el WUP')
     wup = os.path.join(a.out or game_dir, info['folder'])
     shutil.rmtree(wup, ignore_errors=True)
     r = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'pack_game_wup.py'), a.otp, os.path.join(out, 'title'), wup], cwd=ROOT,
@@ -420,7 +420,7 @@ def main():
 
     where = wup
     if a.card:
-        PROGRESS.stage('Copying')
+        PROGRESS.stage('Copiando')
         install = os.path.join(a.card.rstrip('\\/') + os.sep, 'install')
         os.makedirs(install, exist_ok=True)
         size = sum(os.path.getsize(os.path.join(wup, f)) for f in os.listdir(wup))
