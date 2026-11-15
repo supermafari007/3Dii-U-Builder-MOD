@@ -1103,7 +1103,7 @@ class App(QObject):
         if self.save_in:
             argv += ['--save', self.save_in]
         self.log_lines, self.result, self.cancelled = [], None, False
-        stages = [n for n, _ in pipeline.STAGES if n != 'Copying' or self._s['target'] == 'card']
+        stages = [n for n, _ in pipeline.STAGES if n != 'Copiando' or self._s['target'] == 'card']
         self.set(building=True, view='building', stages=stages, stage=0, failed=False, progress=0.0, detail='Iniciando...', log='')
         self.proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace',
                                      creationflags=NO_WINDOW, start_new_session=not WIN, env=dict(os.environ, PYTHONIOENCODING='utf-8'))
