@@ -38,7 +38,7 @@ def converter():
     try:
         import cia_to_decrypted_3ds
     except SystemExit:
-        raise DecryptError('Decrypting needs pyctr: run  pip install pyctr pycryptodome  once.') from None
+        raise DecryptError('El descifrado necesita pyctr: ejecuta una vez pip install pyctr pycryptodome.') from None
     return cia_to_decrypted_3ds
 
 
@@ -86,14 +86,14 @@ def to_plain(path, out_base, kind='game'):
     if head[:4] == b'\x20\x20\x00\x00' and kind in ('game', 'demo'):
         out = out_base + '.3ds'
         if not conv.convert_and_decrypt(path, out):
-            raise DecryptError('Decrypting this CIA failed: the log above says where.')
+            raise DecryptError('Falló el descifrado de esta CIA: el registro anterior indica el motivo.')
         return out
     if head[0x100:0x104] == b'NCSD':
         import shutil
         out = out_base + '.3ds'
         shutil.copyfile(path, out)
         if not (conv.decrypt_in_place(out) and conv.verify(out)):
-            raise DecryptError('Decrypting this .3ds failed: the log above says where.')
+            raise DecryptError('Falló el descifrado de este archivo .3ds: el registro anterior indica el motivo.')
         return out
     out = out_base + '.cxi'
     _full_decrypted(path, None, out)
