@@ -135,7 +135,7 @@ def released(product, folder, url=TDB):
             year = (e.find('date').get('year') if e.find('date') is not None else '') or ''
             if not year.isdigit():
                 return ''
-            return f'Released in {PLACES[code[3]]}: {year}' if code[3] in PLACES else f'Released: {year}'
+            return f'Lanzado en {PLACES[code[3]]}: {year}' if code[3] in PLACES else f'Lanzamiento: {year}'
     return ''
 
 
