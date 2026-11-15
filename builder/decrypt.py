@@ -73,7 +73,7 @@ def program_icon(path):
     except DecryptError:
         raise
     except Exception as e:
-        raise DecryptError(f'pyctr couldn\'t read it: {e}. Check that boot9.bin and seeddb.bin from your own 3DS are in the key folder.') from None
+        raise DecryptError(f'pyctr couldn\'t read it: {e}. Comprueba que boot9.bin y seeddb.bin de tu propia 3DS estén en la carpeta de claves.') from None
 
 
 def to_plain(path, out_base, kind='game'):
