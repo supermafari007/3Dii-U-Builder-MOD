@@ -38,7 +38,7 @@ La documentación también se basa en [3dbrew](https://www.3dbrew.org/) y [WiiUB
 
 Builder comprueba cada archivo antes de utilizarlo en una compilación. Nunca muestra, almacena ni sube su contenido, y tampoco los incluye en sus paquetes: la aplicación se niega a empaquetar archivos si alguno de ellos está dentro de ella. No solicites estos archivos en el sistema de incidencias ni los publiques. Los enlaces a juegos protegidos por derechos de autor o a claves no están permitidos en ninguna parte de este proyecto.
 
-Para jugar con lo que compiles, necesitas una Wii U con [Aroma](https://aroma.foryour.cafe/) **y su módulo sigpatches** (`01_sigpatches.rpn`). Sin ese módulo, los juegos compilados se detienen con el error 199-9999. Para instalar los títulos compilados, puedes usar [WUP Installer GX2](https://github.com/Fangal-Airbag/wup-installer-gx2) o [Wii U Transfer Tools](https://github.com/supermafari007/WiiU-Transfer-Tools), de mi repositorio.
+Para jugar con lo que compiles, necesitas una Wii U con [Aroma](https://aroma.foryour.cafe/) **y su módulo sigpatches** (`01_sigpatches.rpn`). Sin ese módulo, los juegos compilados se detienen con el error 199-9999. Para instalar los títulos compilados, puedes usar [WUP Installer GX2](https://github.com/Fangal-Airbag/wup-installer-gx2) o [Wii U Transfer Tools](https://github.com/supermafari007/WiiU-Transfer-Tools).
 
 ## Cómo utilizarlo
 
