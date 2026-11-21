@@ -1,10 +1,12 @@
-# 3Dii U
+# 3Dii-U Builder MOD
 
-3Dii U convierte los juegos de Nintendo 3DS que posees en juegos para Wii U. Recompila el código ARM del juego a C, compila ese código para la CPU PowerPC de Wii U, traduce el trabajo de la GPU de 3DS para la GPU de Wii U y empaqueta el resultado como un título que WUP Installer GX2 puede instalar en una Wii U modificada.
+**3Dii-U Builder MOD es un fork modificado de 3Dii U Builder**, el proyecto original de [J-Glitch2502](https://github.com/J-Glitch2502/3dii-u). Conserva y amplía el Builder original para convertir volcados propios de juegos de Nintendo 3DS en títulos instalables en Wii U. Esta versión incluye cambios de interfaz, arte, mods y otras mejoras; consulta el historial y los archivos de este repositorio para ver el código fuente.
+
+La aplicación recompila el código ARM del juego a C, compila ese código para la CPU PowerPC de Wii U, traduce el trabajo de la GPU de 3DS para la GPU de Wii U y empaqueta el resultado como un título que WUP Installer GX2 puede instalar en una Wii U modificada.
 
 ## Basado en
 
-3Dii U existe gracias a estos proyectos de código abierto. Sus avisos completos y textos de licencia se encuentran en [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Este fork se deriva del [3Dii U Builder original](https://github.com/J-Glitch2502/3dii-u), y conserva sus avisos y licencias. También se apoya en estos proyectos de código abierto. Los avisos completos y textos de licencia se encuentran en [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 - **[3dsrecomp](https://github.com/nathsou/3dsrecomp)**, de **Nathan Soufflet (nathsou)**, EUPL-1.2: el recompilador de 3DS y el entorno de ejecución sobre los que se construye 3Dii U. Se encuentra en `third_party/3dsrecomp`, junto con las modificaciones de este proyecto para Wii U.
 - **[devkitPro](https://devkitpro.org/)**: devkitPPC (GCC, Binutils, newlib), [wut](https://github.com/devkitPro/wut) y [wut-tools](https://github.com/devkitPro/wut-tools), la cadena de herramientas para Wii U.
@@ -20,7 +22,7 @@ La documentación también se basa en [3dbrew](https://www.3dbrew.org/) y [WiiUB
 
 3Dii U es **100 % gratuito y de código abierto**, bajo la [Licencia Pública de la Unión Europea v1.2](LICENSE). Todas las versiones son gratuitas: no hay versiones de pago, niveles beta de pago ni funciones bloqueadas tras un pago. Puedes usarlo, estudiarlo, compartirlo y modificarlo conforme a la EUPL-1.2. Si distribuyes una versión modificada, debes ofrecer su código fuente bajo la misma licencia.
 
-**Estado: beta, solo para Windows.** [`builder/compat.json`](builder/compat.json) enumera los juegos que se han probado en una Wii U real. Cualquier otro juego se compila como «sin probar»: puede que no inicie o que se detenga a mitad de la ejecución.
+**Versión de este fork: 1.0.0 MOD, solo para Windows.** [`builder/compat.json`](builder/compat.json) enumera los juegos que se han probado en una Wii U real. Cualquier otro juego se compila como «sin probar»: puede que no inicie o que se detenga a mitad de la ejecución. El paquete independiente y las futuras versiones se publican en [Releases](https://github.com/supermafari007/3Dii-U-Builder-MOD/releases).
 
 ## Lo que debes aportar
 
@@ -40,7 +42,7 @@ Para jugar con lo que compiles, necesitas una Wii U con [Aroma](https://aroma.fo
 
 ## Cómo utilizarlo
 
-La mayoría de los usuarios querrán **3Dii U Builder**, la aplicación de escritorio ubicada en [`builder/`](builder/README.md). Seleccionas un volcado y la aplicación compila el juego y lo coloca en tu tarjeta SD. Las versiones independientes de la aplicación no necesitan Python ni una cadena de herramientas. El botón «About» y `pipeline.py --credits` enumeran los proyectos en los que se basa.
+La mayoría de los usuarios querrán **3Dii-U Builder MOD**, la aplicación de escritorio ubicada en [`builder/`](builder/README.md). Seleccionas un volcado y la aplicación compila el juego y lo coloca en tu tarjeta SD. Las versiones independientes de la aplicación no necesitan Python ni una cadena de herramientas. El botón «About» y `pipeline.py --credits` identifican este fork modificado y enumeran los proyectos en los que se basa.
 
 ## Desarrollo
 

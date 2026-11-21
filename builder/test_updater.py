@@ -97,7 +97,7 @@ def serve(data):
 api = serve(json.dumps(LIST).encode())
 assert up.check('builder-1.0-beta-2026-11-12', api).tag == 'builder-1.0-beta-2026-11-14'
 request, timeout = asked[0]
-assert request.full_url == up.API == 'https://api.github.com/repos/J-Glitch2502/3dii-u/releases?per_page=100' and timeout == 8
+assert request.full_url == up.API == 'https://api.github.com/repos/supermafari007/3Dii-U-Builder-MOD/releases?per_page=100' and timeout == 8
 assert request.get_header('User-agent') == '3DiiU-Builder' and request.get_header('Accept') == 'application/vnd.github+json'
 assert request.data is None
 assert up.check('builder-1.0-beta-2026-11-14', api) is None, 'up to date'

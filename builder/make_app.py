@@ -7,7 +7,7 @@ devkitPro, the shader compilers, and what the games' runs learned: where their c
 programs they ran named by fingerprints (shaderlogs.py), as those are the games' own code. None of the games' code or data goes in.
 The 3DS system archives aren't in it: they are each user's own files, imported from their emulator into the work folder.
 Run: python builder/make_app.py [--release <tag>] (needs the toolchain installed here, as the shader generator is built for the app).
---release: this build's tag, like builder-1.0-beta-2026-11-13. The app carries it and its zip is named after it, which is how an app out
+--release: this build's tag, like builder-1.0.0-mod-2026-11-20. The app carries it and its zip is named after it, which is how an app out
 there knows a newer build from its own, whichever release the zip is put under, and hands over to one it downloaded (updater.py); a build
 without it never updates itself."""
 import glob
@@ -154,6 +154,79 @@ def make_icon(path):
     os.remove(png)
 
 
+def stage_qt_runtime(app):
+    """Keep the Visual C++ runtime that Qt was built and tested with.
+
+    PyInstaller can prefer the interpreter's newer runtime DLLs over the copies
+    shipped by PySide6. On Windows, that can make Qt6Core fail to load with
+    ERROR_PROC_NOT_FOUND even though every bundled file is present.
+    """
+    import PySide6
+    source = os.path.dirname(PySide6.__file__)
+    target = os.path.join(app, '_internal')
+    for name in ('vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'msvcp140_1.dll', 'msvcp140_2.dll', 'msvcp140_codecvt_ids.dll'):
+        src = os.path.join(source, name)
+        if os.path.isfile(src):
+            shutil.copy2(src, os.path.join(target, name))
+    # Windows PySide wheels use the system ICU. PyInstaller can accidentally
+    # pick up a different icuuc.dll from MSYS2 on PATH; Qt6Core then fails with
+    # ERROR_PROC_NOT_FOUND before the GUI starts. Keep ICU only when PySide's
+    # own wheel provides it.
+    wheel_files = {name.lower() for name in os.listdir(source)}
+    for name in os.listdir(target):
+        if name.lower().startswith('icu') and name.lower().endswith('.dll') and name.lower() not in wheel_files:
+            os.remove(os.path.join(target, name))
+
+
+def stage_qml_runtime(app):
+    """Ship the Qt Quick QML modules imported by the window.
+
+    PyInstaller collects PySide's Qt DLLs but may leave the QML import tree
+    empty. The frozen app then exits before showing a window (QtQuick missing).
+    Keep only QtQml and QtQuick, matching prune()'s runtime policy.
+    """
+    import PySide6
+    source = os.path.join(HERE, 'qml_runtime')
+    if not all(os.path.isdir(os.path.join(source, name)) for name in ('QtQml', 'QtQuick')):
+        source = os.path.join(os.path.dirname(PySide6.__file__), 'qml')
+    qt_dir = os.path.dirname(PySide6.__file__)
+    qt_target = os.path.join(app, '_internal', 'PySide6')
+    target = os.path.join(qt_target, 'qml')
+    os.makedirs(target, exist_ok=True)
+    for name in ('QtQml', 'QtQuick'):
+        src, dst = os.path.join(source, name), os.path.join(target, name)
+        if os.path.isdir(src):
+            shutil.rmtree(dst, ignore_errors=True)
+            shutil.copytree(src, dst)
+    # QML plugins import Qt libraries dynamically; PyInstaller does not see those
+    # imports when it scans Python modules. Copy the Qt DLL dependency closure.
+    import pefile
+    pending = [os.path.join(root, name) for root, _, files in os.walk(target) for name in files if name.lower().endswith('.dll')]
+    checked = set()
+    while pending:
+        plugin = pending.pop()
+        key = os.path.normcase(plugin)
+        if key in checked:
+            continue
+        checked.add(key)
+        try:
+            pe = pefile.PE(plugin, fast_load=True)
+            pe.parse_data_directories(directories=[pefile.DIRECTORY_ENTRY['IMAGE_DIRECTORY_ENTRY_IMPORT']])
+            imports = [entry.dll.decode(errors='replace') for entry in getattr(pe, 'DIRECTORY_ENTRY_IMPORT', ())]
+        except (OSError, pefile.PEFormatError):
+            continue
+        for name in imports:
+            if not name.lower().startswith('qt6') or not name.lower().endswith('.dll'):
+                continue
+            dst = os.path.join(qt_target, name)
+            if not os.path.isfile(dst):
+                src = os.path.join(qt_dir, name)
+                if os.path.isfile(src):
+                    shutil.copy2(src, dst)
+            if os.path.isfile(dst):
+                pending.append(dst)
+
+
 def unconfirmed(compat, games):
     """the games compat.json calls Complete that have no confirmed shader list under games (shaderlogs.py --confirm): built without it, such a
     game could lose shaders the build it was confirmed with had"""
@@ -169,8 +242,9 @@ def release_tag(argv, version):
         return ''
     import updater
     tag = (argv[argv.index('--release') + 1:] + [''])[0]
-    if not updater.tag_key(tag) or not tag.startswith(f'builder-{version}-'):
-        sys.exit(f'--release takes this build\'s tag, like builder-{version}-beta-2026-11-13')
+    version_tag = version.lower().replace(' ', '-')
+    if not updater.tag_key(tag) or not tag.startswith(f'builder-{version_tag}-'):
+        sys.exit(f'--release takes this build\'s tag, like builder-{version_tag}-2026-11-20')
     return tag
 
 
@@ -199,7 +273,9 @@ def main():
         args += ['--exclude-module', m]
     PyInstaller.__main__.run(args)
     shutil.rmtree(WORK, ignore_errors=True)
+    stage_qt_runtime(os.path.join(OUT, NAME))
     freed = prune(os.path.join(OUT, NAME, '_internal', 'PySide6'))
+    stage_qml_runtime(os.path.join(OUT, NAME))
     engine = bundle_engine(os.path.join(OUT, NAME, 'engine'))
     print(f'{NAME}: {os.path.join(OUT, NAME, NAME + ".exe")} ({freed >> 20} MB of unused Qt left out, engine {engine >> 20} MB)')
     app = os.path.join(OUT, NAME)
@@ -225,7 +301,7 @@ def main():
     for old in glob.glob(os.path.join(OUT, '*.zip')):  # one zip, this build's
         os.remove(old)
     # a release's zip is named after its tag, which is how the updater knows the build (updater.NAMED), with no spaces for GitHub to change
-    z = shutil.make_archive(os.path.join(OUT, release.replace('builder-', '3Dii-U-Builder-', 1) if release else f'{NAME} {gui.VERSION} beta'), 'zip', OUT, NAME)
+    z = shutil.make_archive(os.path.join(OUT, release.replace('builder-', '3Dii-U-Builder-', 1) if release else f'{NAME} {gui.VERSION}'), 'zip', OUT, NAME)
     print(f'for testers: {z} ({os.path.getsize(z) >> 20} MB)')
 
 

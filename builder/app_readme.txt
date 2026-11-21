@@ -1,7 +1,9 @@
-3Dii U Builder {version} (beta)
+3Dii-U Builder MOD {version}
 =========================
 
-3Dii U Builder convierte tus propios volcados de juegos de 3DS en juegos que puedes instalar en tu Wii U. No necesitas instalar nada más: esta carpeta contiene el programa completo.
+3Dii-U Builder MOD es un fork modificado del 3Dii U Builder original, de J-Glitch2502 (https://github.com/J-Glitch2502/3dii-u). Conserva sus créditos y licencias; el código fuente de esta modificación está en https://github.com/supermafari007/3Dii-U-Builder-MOD.
+
+Convierte tus propios volcados de juegos de 3DS en juegos que puedes instalar en tu Wii U. No necesitas instalar nada más: esta carpeta contiene el programa completo.
 
 
 REQUISITOS
@@ -24,7 +26,7 @@ PRIMEROS PASOS
 
 1. Descomprime toda la carpeta «3Dii U Builder» en una ruta corta, por ejemplo C:\Games. Mantén la carpeta engine junto al archivo exe y no ejecutes el programa desde dentro del ZIP.
    Si Windows indica que una ruta es demasiado larga al descomprimir, o Builder informa que faltan archivos, vuelve a extraerlo en una carpeta con una ruta más corta.
-2. Abre «3Dii U Builder.exe». Esta versión beta no está firmada, por lo que Windows podría indicar que «protegió tu PC»: pulsa «Más información» y luego «Ejecutar de todas formas».
+2. Abre «3Dii U Builder.exe». Esta versión no está firmada, por lo que Windows podría indicar que «protegió tu PC»: pulsa «Más información» y luego «Ejecutar de todas formas».
 3. Pulsa el recuadro grande con el símbolo «+» (o Ctrl+O) y selecciona tu volcado. Builder te preguntará por la actualización, el DLC y los mods del juego.
 4. En «Tus archivos», cada indicador se volverá cian cuando Builder disponga del archivo correspondiente.
 5. En «Destino», selecciona tu tarjeta SD o una carpeta y pulsa «¡Compilar!».
@@ -86,5 +88,5 @@ QUÉ SE CONSERVA EN TU PC
 - Puedes agregar tu propio sonido de inicio desde Ayuda > «Imagen y sonido»: selecciona un archivo WAV y todos los juegos que compiles lo reproducirán al iniciar.
 - Builder consulta en GitHub la lista de versiones disponibles y solo descarga una cuando pulsas «Actualizar».
 
-Builder no incluye juegos, datos de juegos ni claves. Esta es una versión beta y se proporciona sin garantía.
+Builder no incluye juegos, datos de juegos ni claves. Esta versión MOD se proporciona sin garantía.
 El archivo Third-party notices.txt enumera el software de código abierto que incluye.

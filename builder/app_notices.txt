@@ -1,7 +1,7 @@
-Software de terceros incluido en 3Dii U Builder
-================================================
+Software de terceros incluido en 3Dii-U Builder MOD
+===================================================
 
-3Dii U Builder es gratuito y de código abierto bajo la Licencia Pública de la Unión Europea v1.2 (LICENSE.txt, junto a este archivo). Su código fuente está en https://github.com/J-Glitch2502/3dii-u y en la carpeta engine de esta aplicación.
+3Dii-U Builder MOD es un fork modificado del 3Dii U Builder original, de J-Glitch2502 (https://github.com/J-Glitch2502/3dii-u). Es gratuito y de código abierto bajo la Licencia Pública de la Unión Europea v1.2 (LICENSE.txt, junto a este archivo). El código fuente de esta modificación está en https://github.com/supermafari007/3Dii-U-Builder-MOD y en la carpeta engine de esta aplicación.
 
 Incluye los siguientes programas y bibliotecas, cada uno bajo su propia licencia. THIRD_PARTY_LICENSES.md, junto a este archivo, contiene todos los avisos y el texto completo de cada licencia. Cada versión publicada en GitHub también ofrece el código fuente de los componentes GPL y LGPL.
 

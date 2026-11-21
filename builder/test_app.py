@@ -54,6 +54,8 @@ try:
     import make_app
     tag = 'builder-1.0-beta-2026-11-13'
     assert make_app.release_tag(['make_app.py'], '1.0') == '' and make_app.release_tag(['make_app.py', '--release', tag], '1.0') == tag
+    mod_tag = 'builder-1.0.0-mod-2026-11-20'
+    assert make_app.release_tag(['make_app.py', '--release', mod_tag], '1.0.0 MOD') == mod_tag
     for bad in (['--release'], ['--release', 'deps-1'], ['--release', 'builder-2.0-beta-2026-11-13'], ['--release', '1.0']):
         try:
             make_app.release_tag(['make_app.py'] + bad, '1.0')
