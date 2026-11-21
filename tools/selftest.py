@@ -121,6 +121,7 @@ def main():
         'fragment variants': [[py, ROOT + '/tools/fs_variants.py', '--self-check']],
         'picture check': [[py, ROOT + '/tools/test_check_pictures.py']],
         'missed code': [[py, ROOT + '/tools/test_learn_missed.py']],
+        'switch through a helper': [[py, ROOT + '/tools/test_recomp_switch.py']],
         'build markers': [[py, ROOT + '/tools/test_mark_built.py']],
         'WUP packer': [[py, ROOT + '/tools/test_pack_wup.py']],
         'boot sound': [[py, ROOT + '/tools/test_boot_sound.py']],

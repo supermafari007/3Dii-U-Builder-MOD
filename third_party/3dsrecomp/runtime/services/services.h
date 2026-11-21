@@ -35,7 +35,7 @@ void apt_notify(u32 signal);
 
 // cfg (languages.h has the rule)
 extern int g_system_language;  // the console's own language: the frontend sets it before the game starts (-1: none)
-u32 cfg_languages();           // the languages the game's region has, a bit each
+u32 cfg_languages();           // the languages the game's regions have, a bit each
 int cfg_language();            // the one the game is told, the same all run
 
 // gsp
@@ -52,14 +52,18 @@ void gsp_cpu_wrote(u32 vaddr, u32 size);       // a service wrote guest memory t
 void gsp_cache_op(u32 vaddr, u32 size, bool cpu_will_read);  // the game flushed or invalidated its cache, by any of the calls that do that
 void register_y2r();
 void register_cam();
+void register_nfc();
+void register_mk7_online();
 bool gsp_gx_pending();
 struct GxStats { u64 cmdlists, gpu_ns, transfers; };
 extern GxStats gx_stats;
 // hid
 void hid_update(u32 buttons, s16 cx, s16 cy, bool touch, u16 tx, u16 ty);  // (host thread, lock not held)
 void hid_motion(const s16 *accel, const s16 *gyro);                        // (the thread that calls hid_update) x, y, z in the 3DS's units
+void ir_rst_update(bool zl, bool zr, s16 rx, s16 ry);                      // New 3DS C-Stick + ZL/ZR (host thread, lock not held)
 // dsp
 void dsp_tick();  // (host thread, lock not held) one audio frame, played whether or not the game has come for the last one shortly
+void uds_tick();  // (called under kmutex from hid_update) poll LAN UDP packets & beacons
 }
 // The host's microphone, for mic:u (lock held). misc.cpp has weak defaults that give silence.
 void mic_host_start();

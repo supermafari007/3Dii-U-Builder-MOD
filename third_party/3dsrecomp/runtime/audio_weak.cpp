@@ -43,12 +43,13 @@ __attribute__((weak)) u32 pipe_readable(u32 pipe) {
 
 __attribute__((weak)) u16 recv_data(u32) { return on ? 0 : 1; }
 
-__attribute__((weak)) bool tick(bool) {
+__attribute__((weak)) bool tick(bool, bool *fresh, bool) {
     if (!on) return false;
     // bump the frame counter of both shared memory regions
     static u16 frame;
     frame++;
     for (u32 region : {0x1FF50000u, 0x1FF60000u}) w16(region + 0x7FFE, frame);
+    if (fresh) *fresh = true;
     return true;
 }
 }  // namespace audio

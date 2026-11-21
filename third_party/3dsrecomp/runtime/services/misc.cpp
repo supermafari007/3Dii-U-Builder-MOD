@@ -1,12 +1,16 @@
 // Small services: ptm, ndm, ac, frd, boss, cecd, news, ir, mic, cam, y2r, ldr:ro, soc, ssl, http, ...
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <ctime>
+#include <deque>
+#include <thread>
 #include <vector>
 
 #include "../loader.h"
 #include "../service.h"
 #include "services.h"
+#include "uds_lan.hpp"
 
 // The host's microphone: silence, unless a port provides one
 __attribute__((weak)) void mic_host_start() {}
@@ -170,6 +174,7 @@ struct Ptm : Service {
     }
 };
 
+#ifndef MK7_PRETENDO_ONLINE
 struct Ac : Service {
     using Service::Service;
     void handle(IPC &ipc) override {
@@ -265,6 +270,7 @@ struct Frd : Service {
         }
     }
 };
+#endif
 
 struct Ndm : Service {
     using Service::Service;
@@ -525,50 +531,812 @@ struct Ir : Service {
     }
 };
 
-// Local wireless with nobody around: a game can look for other players and find none. New Super Mario Bros. 2's Co-op menu stops with a
-// fatal error if it doesn't get its status event.
+struct Uds;
+static Uds *g_uds_instance = nullptr;
+static std::atomic<bool> g_uds_active{false};
+
+// Local wireless over LAN/Wi-Fi UDP (Wii U <-> Wii U).
+// Implements 3DS nwm::UDS discovery beacons, node management, and data channels over UDP port 28340.
 struct Uds : Service {
     using Service::Service;
+    using Clock = std::chrono::steady_clock;
+
     std::shared_ptr<Event> status = make_event(ONESHOT, "uds status");
+    uds_lan::UdpTransport udp;
+    Clock::time_point last_beacon{};
+
+    bool initialized = false;
+    u32 conn_status = (u32)uds_lan::NetworkStatus::NotConnected;
+    u32 disconnect_reason = (u32)uds_lan::DisconnectReason::NotConnected;
+    u16 my_node_id = 0;
+    u16 changed_nodes = 0;
+    u16 node_bitmask = 0;
+    u8 total_nodes = 0;
+    u16 nodes_ids[uds_lan::kUdsMaxNodes]{};
+    std::array<uds_lan::NodeInfo, uds_lan::kUdsMaxNodes> node_infos{};
+    uds_lan::NodeInfo my_node{};
+    uds_lan::NetworkInfo net_info{};
+    std::vector<u8> host_passphrase;
+
+    struct RemoteBeacon {
+        uds_lan::NetworkInfo net;
+        std::array<uds_lan::NodeInfo, uds_lan::kUdsMaxNodes> nodes{};
+        u16 bitmask = 0;
+        u32 ip_be = 0;
+        u16 port_be = 0;
+        Clock::time_point seen{};
+    };
+    std::vector<RemoteBeacon> beacons;
+
+    struct PeerEndpoint {
+        u16 node_id = 0;
+        u32 ip_be = 0;
+        u16 port_be = 0;
+        std::array<u8, 6> mac{};
+    };
+    std::vector<PeerEndpoint> peers;
+
+    struct RxPacket {
+        u16 src_node_id = 0;
+        std::vector<u8> data;
+    };
+    struct BindEntry {
+        u32 bind_node_id = 0;
+        u8 data_channel = 0;
+        u16 filter_node_id = 0;
+        std::shared_ptr<Event> event;
+        std::deque<RxPacket> queue;
+    };
+    std::vector<BindEntry> binds;
+
+    bool join_pending = false;
+    bool join_done = false;
+    bool join_accepted = false;
+    u16 tx_seq = 0;
+
+    ~Uds() {
+        g_uds_active.store(false);
+        if (g_uds_instance == this) g_uds_instance = nullptr;
+        udp.close();
+    }
+
+    static constexpr u8 kMsgBeacon = 1;
+    static constexpr u8 kMsgJoinReq = 2;
+    static constexpr u8 kMsgJoinRsp = 3;
+    static constexpr u8 kMsgNodeMap = 4;
+    static constexpr u8 kMsgData = 5;
+    static constexpr u8 kMsgLeave = 6;
+
+    std::vector<u8> make_udp_packet(u8 msg_type, u16 sender_node, const u8 *payload, u16 plen) const {
+        std::vector<u8> pkt(24 + plen);
+        pkt[0] = 'U'; pkt[1] = 'D'; pkt[2] = 'S'; pkt[3] = '1';
+        pkt[4] = msg_type;
+        pkt[5] = 0;
+        uds_lan::wbe16(&pkt[6], sender_node);
+        uds_lan::wbe32(&pkt[8], net_info.network_id());
+        uds_lan::wbe32(&pkt[12], net_info.wlan_comm_id());
+        std::memcpy(&pkt[16], udp.local_mac().data(), 6);
+        uds_lan::wbe16(&pkt[22], plen);
+        if (plen && payload) std::memcpy(&pkt[24], payload, plen);
+        return pkt;
+    }
+
+    std::vector<u8> build_beacon_udp_packet() const {
+        if (conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsHost) return {};
+        std::vector<u8> pl(0x108 + 2 + uds_lan::kUdsMaxNodes * 40);
+        std::memcpy(&pl[0], net_info.raw.data(), 0x108);
+        uds_lan::wbe16(&pl[0x108], node_bitmask);
+        for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++)
+            node_infos[i].serialize_le(&pl[0x10A + i * 40]);
+        return make_udp_packet(kMsgBeacon, my_node_id, pl.data(), (u16)pl.size());
+    }
+
+    void broadcast_beacon() {
+        if (!udp.ready()) return;
+        auto pkt = build_beacon_udp_packet();
+        if (!pkt.empty()) udp.send_broadcast(pkt.data(), pkt.size());
+    }
+
+    void send_node_map() {
+        if (conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsHost || !udp.ready()) return;
+        // Payload: bitmask(2) + total_nodes(1) + max_nodes(1) + nodes_ids[16](32) + node_infos[16](640) + peers_ep[16](16*6=96)
+        std::vector<u8> pl(4 + 32 + 640 + 96, 0);
+        uds_lan::wbe16(&pl[0], node_bitmask);
+        pl[2] = total_nodes;
+        pl[3] = net_info.max_nodes();
+        for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) uds_lan::wbe16(&pl[4 + i * 2], nodes_ids[i]);
+        for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) node_infos[i].serialize_le(&pl[36 + i * 40]);
+        for (const auto &p : peers) {
+            if (p.node_id >= 1 && p.node_id <= uds_lan::kUdsMaxNodes) {
+                size_t off = 676 + (size_t)(p.node_id - 1) * 6;
+                std::memcpy(&pl[off], &p.ip_be, 4);
+                std::memcpy(&pl[off + 4], &p.port_be, 2);
+            }
+        }
+        auto pkt = make_udp_packet(kMsgNodeMap, my_node_id, pl.data(), (u16)pl.size());
+        for (const auto &p : peers) udp.send_unicast(p.ip_be, p.port_be, pkt.data(), pkt.size());
+    }
+
+    void apply_node_map(const u8 *pl, size_t plen, u32 host_ip_be, u16 host_port_be) {
+        if (plen < 676) return;
+        u16 old_mask = node_bitmask;
+        node_bitmask = uds_lan::rbe16(&pl[0]);
+        total_nodes = pl[2];
+        net_info.set_total_nodes(total_nodes);
+        for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) nodes_ids[i] = uds_lan::rbe16(&pl[4 + i * 2]);
+        for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) node_infos[i].deserialize_le(&pl[36 + i * 40]);
+        if (plen >= 772) {
+            peers.clear();
+            // Always keep host endpoint
+            PeerEndpoint hep{};
+            hep.node_id = 1; hep.ip_be = host_ip_be; hep.port_be = host_port_be;
+            net_info.get_host_mac(hep.mac.data());
+            peers.push_back(hep);
+            for (u32 i = 1; i < uds_lan::kUdsMaxNodes; i++) {
+                u16 nid = nodes_ids[i];
+                if (!nid || nid == my_node_id) continue;
+                size_t off = 676 + (size_t)(nid - 1) * 6;
+                u32 ip = 0; u16 pt = 0;
+                std::memcpy(&ip, &pl[off], 4);
+                std::memcpy(&pt, &pl[off + 4], 2);
+                if (ip) peers.push_back({nid, ip, pt, {}});
+            }
+        }
+        changed_nodes |= (u16)(old_mask ^ node_bitmask);
+        if (changed_nodes) status->signal();
+    }
+
+    void reset_network_state(u32 new_status, u32 new_reason) {
+        conn_status = new_status;
+        disconnect_reason = new_reason;
+        my_node_id = 0;
+        changed_nodes = 0;
+        node_bitmask = 0;
+        total_nodes = 0;
+        std::memset(nodes_ids, 0, sizeof(nodes_ids));
+        for (auto &n : node_infos) n.clear();
+        peers.clear();
+        for (auto &b : binds) {
+            b.queue.clear();
+            if (b.event) b.event->signal();
+        }
+        status->signal();
+    }
+
+    void handle_udp_packet(const u8 *buf, int len, u32 src_ip_be, u16 src_port_be) {
+        if (len < 24 || buf[0] != 'U' || buf[1] != 'D' || buf[2] != 'S' || buf[3] != '1') return;
+        if (std::memcmp(&buf[16], udp.local_mac().data(), 6) == 0) return;  // ignore self
+        u8 msg_type = buf[4];
+        u16 sender_node = uds_lan::rbe16(&buf[6]);
+        u32 net_id = uds_lan::rbe32(&buf[8]);
+        u32 comm_id = uds_lan::rbe32(&buf[12]);
+        u16 plen = uds_lan::rbe16(&buf[22]);
+        if (24 + (int)plen > len) return;
+        const u8 *pl = buf + 24;
+
+        switch (msg_type) {
+        case kMsgBeacon: {
+            if (plen < 0x10A + uds_lan::kUdsMaxNodes * 40) break;
+            uds_lan::NetworkInfo ni{};
+            std::memcpy(ni.raw.data(), pl, 0x108);
+            u16 bmask = uds_lan::rbe16(&pl[0x108]);
+            auto now = Clock::now();
+            u8 hmac[6]; ni.get_host_mac(hmac);
+            auto it = std::find_if(beacons.begin(), beacons.end(), [&](const RemoteBeacon &rb) {
+                u8 m[6]; rb.net.get_host_mac(m);
+                return std::memcmp(m, hmac, 6) == 0;
+            });
+            if (it == beacons.end()) {
+                beacons.emplace_back();
+                it = beacons.end() - 1;
+            }
+            it->net = ni;
+            it->bitmask = bmask;
+            it->ip_be = src_ip_be;
+            it->port_be = src_port_be;
+            it->seen = now;
+            for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++)
+                it->nodes[i].deserialize_le(&pl[0x10A + i * 40]);
+            break;
+        }
+        case kMsgJoinReq: {
+            if (conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsHost) break;
+            if (net_id != net_info.network_id() || comm_id != net_info.wlan_comm_id()) break;
+            if (plen < 42) break;
+            uds_lan::NodeInfo cnode{};
+            cnode.deserialize_le(pl + 1);
+            u8 pass_len = pl[41];
+            bool pass_ok = (plen >= 42 + pass_len) &&
+                (host_passphrase.empty() || (pass_len == host_passphrase.size() && std::memcmp(pl + 42, host_passphrase.data(), pass_len) == 0));
+
+            u16 assigned = 0;
+            int free_slot = -1;
+            if (pass_ok) {
+                // Check if this MAC is already connected
+                for (const auto &p : peers) {
+                    if (std::memcmp(p.mac.data(), &buf[16], 6) == 0) {
+                        assigned = p.node_id;
+                        free_slot = (int)assigned - 1;
+                        break;
+                    }
+                }
+                if (free_slot < 0) {
+                    u8 max_n = net_info.max_nodes();
+                    for (int i = 1; i < (int)max_n; i++) {
+                        if (nodes_ids[i] == 0) { free_slot = i; assigned = (u16)(i + 1); break; }
+                    }
+                }
+            }
+
+            if (free_slot >= 0 && assigned != 0) {
+                bool is_new = (nodes_ids[free_slot] == 0);
+                cnode.network_node_id = assigned;
+                nodes_ids[free_slot] = assigned;
+                node_infos[free_slot] = cnode;
+                node_bitmask |= (u16)(1u << free_slot);
+                if (is_new) {
+                    total_nodes++;
+                    net_info.set_total_nodes(total_nodes);
+                    PeerEndpoint pe{};
+                    pe.node_id = assigned; pe.ip_be = src_ip_be; pe.port_be = src_port_be;
+                    std::memcpy(pe.mac.data(), &buf[16], 6);
+                    peers.push_back(pe);
+                    changed_nodes |= (u16)(1u << free_slot);
+                }
+                // Send JOIN_RSP (accepted = 1)
+                std::vector<u8> rsp(3 + 4 + 32 + 640, 0);
+                rsp[0] = 1;
+                uds_lan::wbe16(&rsp[1], assigned);
+                uds_lan::wbe16(&rsp[3], node_bitmask);
+                rsp[5] = total_nodes;
+                rsp[6] = net_info.max_nodes();
+                for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) uds_lan::wbe16(&rsp[7 + i * 2], nodes_ids[i]);
+                for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) node_infos[i].serialize_le(&rsp[39 + i * 40]);
+                auto pkt = make_udp_packet(kMsgJoinRsp, my_node_id, rsp.data(), (u16)rsp.size());
+                udp.send_unicast(src_ip_be, src_port_be, pkt.data(), pkt.size());
+                send_node_map();
+                broadcast_beacon();
+                status->signal();
+            } else {
+                u8 rsp[3] = {0, 0, 0};
+                auto pkt = make_udp_packet(kMsgJoinRsp, my_node_id, rsp, sizeof(rsp));
+                udp.send_unicast(src_ip_be, src_port_be, pkt.data(), pkt.size());
+            }
+            break;
+        }
+        case kMsgJoinRsp: {
+            if (!join_pending || plen < 3) break;
+            join_done = true;
+            join_accepted = (pl[0] == 1);
+            if (join_accepted && plen >= 679) {
+                my_node_id = uds_lan::rbe16(&pl[1]);
+                my_node.network_node_id = my_node_id;
+                apply_node_map(pl + 3, (size_t)(plen - 3), src_ip_be, src_port_be);
+            }
+            break;
+        }
+        case kMsgNodeMap: {
+            if (conn_status == (u32)uds_lan::NetworkStatus::ConnectedAsClient ||
+                conn_status == (u32)uds_lan::NetworkStatus::ConnectedAsSpectator) {
+                if (net_id == net_info.network_id()) apply_node_map(pl, plen, src_ip_be, src_port_be);
+            }
+            break;
+        }
+        case kMsgData: {
+            if (conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsHost &&
+                conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsClient &&
+                conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsSpectator) break;
+            if (net_id != net_info.network_id() || plen < 8) break;
+            u16 dest_node = uds_lan::rbe16(&pl[0]);
+            u8 dchan = pl[2];
+            u8 flags = pl[3];
+            u16 dsize = uds_lan::rbe16(&pl[6]);
+            if (8 + (size_t)dsize > plen) break;
+            bool for_me = (dest_node == 0xFFFF || dest_node == my_node_id || (flags & 2));
+            if (!for_me) break;
+            for (auto &b : binds) {
+                if (b.data_channel == dchan &&
+                    (b.filter_node_id == 0 || b.filter_node_id == 0xFFFF || b.filter_node_id == sender_node)) {
+                    RxPacket rx;
+                    rx.src_node_id = sender_node;
+                    rx.data.assign(pl + 8, pl + 8 + dsize);
+                    b.queue.push_back(std::move(rx));
+                    if (b.event) b.event->signal();
+                }
+            }
+            break;
+        }
+        case kMsgLeave: {
+            if (net_id != net_info.network_id()) break;
+            if (conn_status == (u32)uds_lan::NetworkStatus::ConnectedAsHost) {
+                for (u32 i = 1; i < uds_lan::kUdsMaxNodes; i++) {
+                    if (nodes_ids[i] == sender_node) {
+                        nodes_ids[i] = 0;
+                        node_infos[i].clear();
+                        node_bitmask &= ~(u16)(1u << i);
+                        if (total_nodes > 1) total_nodes--;
+                        net_info.set_total_nodes(total_nodes);
+                        changed_nodes |= (u16)(1u << i);
+                    }
+                }
+                peers.erase(std::remove_if(peers.begin(), peers.end(),
+                    [&](const PeerEndpoint &p) { return p.node_id == sender_node; }), peers.end());
+                send_node_map();
+                broadcast_beacon();
+                status->signal();
+            } else if ((conn_status == (u32)uds_lan::NetworkStatus::ConnectedAsClient ||
+                        conn_status == (u32)uds_lan::NetworkStatus::ConnectedAsSpectator) && sender_node == 1) {
+                reset_network_state((u32)uds_lan::NetworkStatus::NotConnected, (u32)uds_lan::DisconnectReason::ConnectionLost);
+            }
+            break;
+        }
+        }
+    }
+
+    void poll_udp_locked() {
+        u8 buf[2048];
+        u32 sip = 0; u16 spt = 0;
+        for (int iter = 0; iter < 32; iter++) {
+            int n = udp.recv(buf, sizeof(buf), sip, spt);
+            if (n <= 0) break;
+            handle_udp_packet(buf, n, sip, spt);
+        }
+    }
+
+    void tick_locked() {
+        if (!initialized) return;
+        poll_udp_locked();
+        auto now = Clock::now();
+        if (now - last_beacon >= std::chrono::milliseconds(100)) {
+            last_beacon = now;
+            if (conn_status == (u32)uds_lan::NetworkStatus::ConnectedAsHost && udp.ready())
+                broadcast_beacon();
+            beacons.erase(std::remove_if(beacons.begin(), beacons.end(), [&](const RemoteBeacon &rb) {
+                return (now - rb.seen) > std::chrono::seconds(3);
+            }), beacons.end());
+        }
+    }
+
+    void ensure_udp(Lock *lk) {
+        if (udp.ready()) return;
+        if (lk) run_blocked(*lk, [&] { udp.init(); });
+        else udp.init();
+        if (udp.ready()) {
+            last_beacon = Clock::now();
+            g_uds_instance = this;
+            g_uds_active.store(true);
+        }
+    }
+
     void handle(IPC &ipc) override {
         switch (ipc.cmd()) {
+        case 0x0001:  // InitializeDeprecated
         case 0x001B:  // InitializeWithVersion
+            my_node.from_ipc(ipc, 2);
+            initialized = true;
+            beacons.clear();
+            binds.clear();
+            reset_network_state((u32)uds_lan::NetworkStatus::NotConnected, (u32)uds_lan::DisconnectReason::NotConnected);
+            status->clear();
             ipc.ok(1, 2);
             ipc.handles(2, {status});
             break;
+
+        case 0x0004:  // BeginHostingNetworkDeprecated
+        case 0x001D: {  // BeginHostingNetwork
+            ensure_udp(ipc.lk);
+            std::memset(net_info.raw.data(), 0, net_info.raw.size());
+            u32 pass_sz = 0, pass_va = 0;
+            if (ipc.cmd() == 0x001D) {
+                pass_sz = ipc[1];
+                u32 ni_va = ipc[3];
+                pass_va = ipc[5];
+                if (ni_va) std::memcpy(net_info.raw.data(), gptr(ni_va), 0x108);
+            } else {
+                for (int i = 0; i < 15; i++) uds_lan::wle32(&net_info.raw[i * 4], ipc[1 + i]);
+                pass_sz = ipc[16];
+                pass_va = ipc[18];
+            }
+            host_passphrase.clear();
+            if (pass_sz && pass_va) {
+                const u8 *p = gptr(pass_va);
+                host_passphrase.assign(p, p + std::min<u32>(pass_sz, 256));
+            }
+            net_info.set_host_mac(udp.local_mac().data());
+            net_info.set_channel(11);
+            net_info.set_oui_nintendo();
+            if (net_info.network_id() == 0) net_info.set_network_id((u32)(std::time(nullptr) ^ 0x3D110001u));
+
+            peers.clear();
+            std::memset(nodes_ids, 0, sizeof(nodes_ids));
+            for (auto &n : node_infos) n.clear();
+            my_node_id = 1;
+            my_node.network_node_id = 1;
+            nodes_ids[0] = 1;
+            node_infos[0] = my_node;
+            node_bitmask = 1;
+            total_nodes = 1;
+            net_info.set_total_nodes(1);
+            conn_status = (u32)uds_lan::NetworkStatus::ConnectedAsHost;
+            disconnect_reason = (u32)uds_lan::DisconnectReason::None;
+            changed_nodes = 1;
+            broadcast_beacon();
+            status->signal();
+            ipc.ok();
+            break;
+        }
+
+        case 0x0007:  // UpdateNetworkAttribute
+            net_info.set_attributes((u16)ipc[1]);
+            broadcast_beacon();
+            ipc.ok();
+            break;
+
+        case 0x0010: {  // SetApplicationData
+            u32 sz = ipc[1], va = ipc[3];
+            net_info.set_app_data(va ? gptr(va) : nullptr, (u8)std::min<u32>(sz, uds_lan::kAppDataMax));
+            broadcast_beacon();
+            ipc.ok();
+            break;
+        }
+
+        case 0x0011: {  // GetApplicationData
+            u32 bsz = 0;
+            u32 dst = ipc.static_buffer(0, &bsz);
+            u32 sz = std::min<u32>({ipc[1], bsz, net_info.app_data_size()});
+            if (dst && sz) std::memcpy(gptr(dst), &net_info.raw[0x40], sz);
+            ipc.ok(2, 2);
+            ipc.set(2, sz);
+            ipc.static_desc(3, 0, sz);
+            break;
+        }
+
         case 0x000B:  // GetConnectionStatus
             ipc.ok(13);
-            ipc.set(2, 3);  // not connected
-            for (int i = 3; i < 14; i++) ipc.set(i, 0);
+            ipc.set(2, conn_status);
+            ipc.set(3, disconnect_reason);
+            ipc.set(4, (u32)my_node_id | ((u32)changed_nodes << 16));
+            changed_nodes = 0;
+            for (int i = 0; i < 8; i++)
+                ipc.set(5 + i, (u32)nodes_ids[i * 2] | ((u32)nodes_ids[i * 2 + 1] << 16));
+            ipc.set(13, (u32)total_nodes | ((u32)net_info.max_nodes() << 8) | ((u32)node_bitmask << 16));
             break;
-        case 0x000D:  // GetNodeInformation: no such node
-            ipc.result(0xC90113FA);
+
+        case 0x000D: {  // GetNodeInformation
+            u16 target = (u16)ipc[1];
+            bool found = false;
+            for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) {
+                if (nodes_ids[i] == target && node_infos[i].network_node_id == target) {
+                    ipc.ok(11);
+                    node_infos[i].to_ipc(ipc, 2);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) ipc.result(0xC90113FA);
             break;
-        case 0x000F: {  // RecvBeaconBroadcastData(size, ..., mapped buffer): no beacons. Header: size of the buffer, bytes used, entries
+        }
+
+        case 0x000F: {  // RecvBeaconBroadcastData
+            ensure_udp(ipc.lk);
+            poll_udp_locked();
+            const u32 out_max = ipc[1];
+            u8 filter_mac[6]{};
+            uds_lan::wle32(filter_mac, ipc[4]);
+            uds_lan::wle16(filter_mac + 4, (u16)ipc[5]);
+            bool any_mac = true;
+            bool all_ff = true, all_00 = true;
+            for (int i = 0; i < 6; i++) {
+                if (filter_mac[i] != 0xFF) all_ff = false;
+                if (filter_mac[i] != 0x00) all_00 = false;
+            }
+            any_mac = all_ff || all_00;
+
             const u32 desc = ipc[19], buf = ipc[20];
-            w32(buf, ipc[1]);
-            w32(buf + 4, 12);
-            w32(buf + 8, 0);
+            u32 cur = 12, entries = 0;
+            auto now = Clock::now();
+            for (const auto &rb : beacons) {
+                if ((now - rb.seen) > std::chrono::seconds(3)) continue;
+                u8 hmac[6]; rb.net.get_host_mac(hmac);
+                if (!any_mac && std::memcmp(hmac, filter_mac, 6) != 0) continue;
+                auto frame = uds_lan::build_beacon_frame(rb.net, rb.nodes, rb.bitmask);
+                u32 entry_sz = 0x1C + (u32)frame.size();
+                if (cur + entry_sz > out_max) break;
+                u8 *dst = gptr(buf + cur);
+                std::memset(dst, 0, 0x1C);
+                uds_lan::wle32(dst + 0x00, entry_sz);
+                dst[0x05] = rb.net.channel() ? rb.net.channel() : 11;
+                std::memcpy(dst + 0x08, hmac, 6);
+                uds_lan::wle32(dst + 0x14, entry_sz);
+                uds_lan::wle32(dst + 0x18, 0x1C);
+                std::memcpy(dst + 0x1C, frame.data(), frame.size());
+                cur += entry_sz;
+                entries++;
+            }
+            w32(buf + 0, out_max);
+            w32(buf + 4, cur);
+            w32(buf + 8, entries);
             ipc.ok(1, 2);
             ipc.set(2, desc);
             ipc.set(3, buf);
             break;
         }
-        case 0x0012:  // Bind: an event for packets that never come (New Super Mario Bros. 2's Coin Rush)
-            ipc.ok(1, 2);
-            ipc.handles(2, {bind});
+
+        case 0x000E:  // DecryptBeaconDataDeprecated
+        case 0x001F: {  // DecryptBeaconData
+            u32 nsz = ipc[1] >> 14, nva = ipc[2];
+            u32 e0sz = ipc[3] >> 14, e0va = ipc[4];
+            u32 e1sz = ipc[5] >> 14, e1va = ipc[6];
+            if (!nva || nsz < 0x108 || !e0va || e0sz <= 4) {
+                ipc.result(0xE0E113F8);
+                break;
+            }
+            std::vector<u8> raw;
+            const u8 *e0 = gptr(e0va);
+            raw.insert(raw.end(), e0 + 4, e0 + e0sz);
+            if (e1va && e1sz > 4) {
+                const u8 *e1 = gptr(e1va);
+                raw.insert(raw.end(), e1 + 4, e1 + e1sz);
+            }
+            uds_lan::NetworkInfo ni{};
+            std::memcpy(ni.raw.data(), gptr(nva), 0x108);
+            u8 max_n = ni.max_nodes();
+
+            std::array<uds_lan::NodeInfo, uds_lan::kUdsMaxNodes> out_nodes{};
+            for (u8 i = 0; i < max_n; i++) {
+                size_t off = 18 + (size_t)i * 30;
+                if (off + 30 > raw.size()) break;
+                const u8 *bn = &raw[off];
+                out_nodes[i].friend_code_seed = uds_lan::rbe64(bn + 0);
+                for (int j = 0; j < 10; j++) out_nodes[i].username[j] = uds_lan::rbe16(bn + 8 + j * 2);
+                out_nodes[i].network_node_id = uds_lan::rbe16(bn + 28);
+            }
+            u32 out_sz = uds_lan::kUdsMaxNodes * 40;
+            u32 out_cap = 0;
+            u32 out_va = ipc.static_buffer(0, &out_cap);
+            if (out_va && out_cap >= out_sz) {
+                u8 *p = gptr(out_va);
+                for (u32 i = 0; i < uds_lan::kUdsMaxNodes; i++) out_nodes[i].serialize_le(p + i * 40);
+                ipc.ok(1, 2);
+                ipc.static_desc(2, 0, out_sz);
+            } else {
+                ipc.result(0xE0E113F8);
+            }
             break;
+        }
+
+        case 0x0009:  // ConnectToNetworkDeprecated
+        case 0x001E: {  // ConnectToNetwork
+            ensure_udp(ipc.lk);
+            std::memset(net_info.raw.data(), 0, net_info.raw.size());
+            u8 conn_type = 1;
+            u32 pass_sz = 0, pass_va = 0;
+            if (ipc.cmd() == 0x001E) {
+                conn_type = (u8)ipc[1];
+                pass_sz = ipc[2];
+                u32 ni_va = ipc[4];
+                pass_va = ipc[6];
+                if (ni_va) std::memcpy(net_info.raw.data(), gptr(ni_va), 0x108);
+            } else {
+                for (int i = 0; i < 15; i++) uds_lan::wle32(&net_info.raw[i * 4], ipc[1 + i]);
+                conn_type = (u8)ipc[16];
+                pass_sz = ipc[17];
+                pass_va = ipc[19];
+            }
+            u8 hmac[6]; net_info.get_host_mac(hmac);
+            auto it = std::find_if(beacons.begin(), beacons.end(), [&](const RemoteBeacon &rb) {
+                u8 m[6]; rb.net.get_host_mac(m);
+                return std::memcmp(m, hmac, 6) == 0 || (rb.net.network_id() == net_info.network_id() && net_info.network_id() != 0);
+            });
+            if (it == beacons.end() || !udp.ready()) {
+                status->signal();
+                ipc.result(0xE0E113F8);
+                break;
+            }
+            net_info = it->net;
+            u32 host_ip = it->ip_be;
+            u16 host_port = it->port_be;
+
+            u8 plen_clamped = (u8)std::min<u32>(pass_sz, 200);
+            std::vector<u8> req(42 + plen_clamped, 0);
+            req[0] = conn_type;
+            my_node.serialize_le(&req[1]);
+            req[41] = plen_clamped;
+            if (plen_clamped && pass_va) std::memcpy(&req[42], gptr(pass_va), plen_clamped);
+
+            join_pending = true;
+            join_done = false;
+            join_accepted = false;
+            auto pkt = make_udp_packet(kMsgJoinReq, 0, req.data(), (u16)req.size());
+            udp.send_unicast(host_ip, host_port, pkt.data(), pkt.size());
+
+            for (int w = 0; w < 250 && !join_done; w++) {
+                if (ipc.lk) run_blocked(*ipc.lk, [] { std::this_thread::sleep_for(std::chrono::milliseconds(4)); });
+                else std::this_thread::sleep_for(std::chrono::milliseconds(4));
+                poll_udp_locked();
+                if (w == 50 || w == 125) udp.send_unicast(host_ip, host_port, pkt.data(), pkt.size());
+            }
+            join_pending = false;
+            if (join_done && join_accepted) {
+                conn_status = (conn_type == 2) ? (u32)uds_lan::NetworkStatus::ConnectedAsSpectator
+                                               : (u32)uds_lan::NetworkStatus::ConnectedAsClient;
+                disconnect_reason = (u32)uds_lan::DisconnectReason::None;
+                changed_nodes = node_bitmask;
+                status->signal();
+                ipc.ok();
+            } else {
+                reset_network_state((u32)uds_lan::NetworkStatus::NotConnected, (u32)uds_lan::DisconnectReason::NotConnected);
+                ipc.result(0xE0E113F8);
+            }
+            break;
+        }
+
+        case 0x0012: {  // Bind
+            u32 bnode = ipc[1];
+            u8 dchan = (u8)ipc[3];
+            u16 fnode = (u16)ipc[4];
+            auto it = std::find_if(binds.begin(), binds.end(), [&](const BindEntry &b) { return b.bind_node_id == bnode; });
+            if (it == binds.end()) {
+                BindEntry be;
+                be.bind_node_id = bnode;
+                be.data_channel = dchan;
+                be.filter_node_id = fnode;
+                be.event = make_event(ONESHOT, "uds bind");
+                binds.push_back(std::move(be));
+                it = binds.end() - 1;
+            }
+            ipc.ok(1, 2);
+            ipc.handles(2, {it->event});
+            break;
+        }
+
+        case 0x0013: {  // Unbind
+            u32 bnode = ipc[1];
+            for (auto it = binds.begin(); it != binds.end(); ++it) {
+                if (it->bind_node_id == bnode) {
+                    if (it->event) it->event->signal();
+                    binds.erase(it);
+                    break;
+                }
+            }
+            ipc.ok();
+            break;
+        }
+
+        case 0x0017: {  // SendTo
+            u16 dest_node = (u16)ipc[2];
+            u8 dchan = (u8)ipc[3];
+            u32 dsize = ipc[5];
+            u8 flags = (u8)ipc[6];
+            u32 bsz = ipc[7] >> 14;
+            u32 src = ipc[8];
+            if (!src || dsize > bsz || dsize > uds_lan::kMaxDataPayload) {
+                ipc.result(0xE0E113F8);
+                break;
+            }
+            if (conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsHost &&
+                conn_status != (u32)uds_lan::NetworkStatus::ConnectedAsClient) {
+                ipc.result(0xC90113FA);
+                break;
+            }
+            std::vector<u8> pl(8 + dsize);
+            uds_lan::wbe16(&pl[0], dest_node);
+            pl[2] = dchan;
+            pl[3] = flags;
+            uds_lan::wbe16(&pl[4], ++tx_seq);
+            uds_lan::wbe16(&pl[6], (u16)dsize);
+            if (dsize) std::memcpy(&pl[8], gptr(src), dsize);
+            auto pkt = make_udp_packet(kMsgData, my_node_id, pl.data(), (u16)pl.size());
+
+            bool bcast = (dest_node == 0xFFFF || (flags & 2));
+            for (const auto &p : peers) {
+                if (bcast || p.node_id == dest_node)
+                    udp.send_unicast(p.ip_be, p.port_be, pkt.data(), pkt.size());
+            }
+            ipc.ok();
+            break;
+        }
+
+        case 0x0014: {  // PullPacket
+            poll_udp_locked();
+            u32 bnode = ipc[1];
+            u32 bsz = 0;
+            u32 dst = ipc.static_buffer(0, &bsz);
+            auto it = std::find_if(binds.begin(), binds.end(), [&](const BindEntry &b) { return b.bind_node_id == bnode; });
+            if (it == binds.end() || it->queue.empty()) {
+                if (dst && bsz) std::memset(gptr(dst), 0, bsz);
+                ipc.ok(3, 2);
+                ipc.set(2, 0);
+                ipc.set(3, 0);
+                ipc.static_desc(4, 0, bsz);
+                break;
+            }
+            auto pkt = std::move(it->queue.front());
+            it->queue.pop_front();
+            u32 n = std::min<u32>((u32)pkt.data.size(), bsz);
+            if (dst && n) std::memcpy(gptr(dst), pkt.data.data(), n);
+            if (!it->queue.empty() && it->event) it->event->signal();
+            ipc.ok(3, 2);
+            ipc.set(2, n);
+            ipc.set(3, pkt.src_node_id);
+            ipc.static_desc(4, 0, n);
+            break;
+        }
+
+        case 0x0005:  // EjectClient
+        case 0x0006: {  // EjectSpectator
+            u16 target = (u16)ipc[1];
+            if (conn_status == (u32)uds_lan::NetworkStatus::ConnectedAsHost) {
+                auto pkt = make_udp_packet(kMsgLeave, my_node_id, nullptr, 0);
+                for (const auto &p : peers) {
+                    if (target == 0xFFFF || p.node_id == target) udp.send_unicast(p.ip_be, p.port_be, pkt.data(), pkt.size());
+                }
+                for (u32 i = 1; i < uds_lan::kUdsMaxNodes; i++) {
+                    if (target == 0xFFFF || nodes_ids[i] == target) {
+                        if (nodes_ids[i]) {
+                            nodes_ids[i] = 0;
+                            node_infos[i].clear();
+                            node_bitmask &= ~(u16)(1u << i);
+                            if (total_nodes > 1) total_nodes--;
+                            changed_nodes |= (u16)(1u << i);
+                        }
+                    }
+                }
+                net_info.set_total_nodes(total_nodes);
+                peers.erase(std::remove_if(peers.begin(), peers.end(),
+                    [&](const PeerEndpoint &p) { return target == 0xFFFF || p.node_id == target; }), peers.end());
+                send_node_map();
+                broadcast_beacon();
+                status->signal();
+            }
+            ipc.ok();
+            break;
+        }
+
+        case 0x001A:  // GetChannel
+            ipc.ok(2);
+            ipc.set(2, (conn_status != (u32)uds_lan::NetworkStatus::NotConnected) ? 11 : 0);
+            break;
+
+        case 0x0008:  // DestroyNetwork
+        case 0x000A: {  // DisconnectNetwork
+            if (udp.ready() && my_node_id) {
+                auto pkt = make_udp_packet(kMsgLeave, my_node_id, nullptr, 0);
+                for (const auto &p : peers) udp.send_unicast(p.ip_be, p.port_be, pkt.data(), pkt.size());
+            }
+            reset_network_state((u32)uds_lan::NetworkStatus::NotConnected, (u32)uds_lan::DisconnectReason::NotConnected);
+            ipc.ok();
+            break;
+        }
+
         case 0x0003:  // Shutdown
-        case 0x000A:  // DisconnectNetwork
-        case 0x0013:  // Unbind
+            if (udp.ready() && my_node_id) {
+                auto pkt = make_udp_packet(kMsgLeave, my_node_id, nullptr, 0);
+                for (const auto &p : peers) udp.send_unicast(p.ip_be, p.port_be, pkt.data(), pkt.size());
+            }
+            reset_network_state((u32)uds_lan::NetworkStatus::NotConnected, (u32)uds_lan::DisconnectReason::NotConnected);
+            binds.clear();
+            initialized = false;
+            g_uds_active.store(false);
+            udp.close();
+            ipc.ok();
+            break;
+
+        case 0x0002:  // Scrap
+        case 0x0015:  // SetMaxSendDelay
+        case 0x0020:  // Flush
+        case 0x0021:  // SetProbeResponseParam
             ipc.ok();
             break;
         default:
             unimplemented(ipc);
         }
     }
-    std::shared_ptr<Event> bind = make_event(ONESHOT, "uds bind");
 };
+
+void uds_tick() {
+    if (g_uds_active.load() && g_uds_instance) g_uds_instance->tick_locked();
+}
 
 struct Generic : Service {
     using Service::Service;
@@ -736,10 +1504,12 @@ struct Am : Service {
 void register_misc() {
     register_service(std::make_shared<Ptm>("ptm:u"));
     register_service(std::make_shared<Ptm>("ptm:sysm"));
+#ifndef MK7_PRETENDO_ONLINE
     register_service(std::make_shared<Ac>("ac:u"));
     register_service(std::make_shared<Ac>("ac:i"));
     register_service(std::make_shared<Frd>("frd:u"));
     register_service(std::make_shared<Frd>("frd:a"));
+#endif
     register_service(std::make_shared<Ndm>("ndm:u"));
     register_service(std::make_shared<Cecd>("cecd:u"));
     register_service(std::make_shared<Boss>("boss:U"));
@@ -751,9 +1521,11 @@ void register_misc() {
     register_service(std::make_shared<DlpSrvr>("dlp:SRVR"));
     register_y2r();
     register_cam();
+    register_nfc();
+    register_mk7_online();
     register_service(std::make_shared<Ssl>("ssl:C"));
-    for (const char *n : {"news:u", "soc:U", "http:C", "dlp:FKCL",
-                          "pxi:dev", "act:u", "nim:aoc", "qtm:u", "csnd:SND", "nfc:u"})
+    for (const char *n : {"news:u", "dlp:FKCL",
+                          "pxi:dev", "nim:aoc", "qtm:u", "csnd:SND"})
         register_service(std::make_shared<Generic>(n));
 }
 

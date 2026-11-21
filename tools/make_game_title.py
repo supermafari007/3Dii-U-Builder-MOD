@@ -11,7 +11,10 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(ROOT, 'phase0', 'title_code')
 ARCHIVES = os.path.join(ROOT, 'games', 'system_archives')
+THREEDS_TEMPLATE = os.path.join(ROOT, 'phase0', 'title_code', 'meta', 'nintendo_3ds_template_clean.png')
+THREEDS_LOGO = os.path.join(ROOT, 'phase0', 'title_code', 'meta', 'nintendo_3ds_logo.png')
 BACKGROUND = (0xFF, 0xF4, 0xD0)
+_QT_APP = None
 
 
 def link(src, dst):
@@ -83,18 +86,18 @@ def unpacked_shared_font(archive):
 
 
 def art_pixels(path, w, h, background):
-    """A picture (cover art, say) as rows of (r, g, b), scaled to fit w x h and centred on the background. Read with Qt, which the builder
-    carries; None if it can't be read."""
+    """A picture (cover art, say) as rows of (r, g, b), scaled to fill w x h and centre-cropped. Read with Qt, which the builder carries;
+    None if it can't be read."""
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QColor, QImage, QPainter
     src = QImage(path)
     if src.isNull():
         return None
-    fit = src.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    fit = src.scaled(w, h, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation)
     canvas = QImage(w, h, QImage.Format_RGB888)
     canvas.fill(QColor(*background))
     painter = QPainter(canvas)
-    painter.drawImage((w - fit.width()) // 2, (h - fit.height()) // 2, fit)
+    painter.drawImage(0, 0, fit, (fit.width() - w) // 2, (fit.height() - h) // 2, w, h)
     painter.end()
     stride, data = canvas.bytesPerLine(), bytes(canvas.constBits())
     return [[tuple(data[y * stride + 3 * x:y * stride + 3 * x + 3]) for x in range(w)] for y in range(h)]
@@ -115,23 +118,42 @@ def smdh_names(smdh_path):
 _qt = None  # the application Qt draws text with, made once
 
 
-def console_screens(art, smdh_path, released='', case_scan=False):
+def _ensure_qt():
+    global _qt, _QT_APP
+    from PySide6.QtGui import QFontDatabase, QGuiApplication
+    app = QGuiApplication.instance()
+    if app is None:
+        os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+        app = QGuiApplication([sys.argv[0]] if sys.argv else [])
+    _qt = _QT_APP = app
+    if not QFontDatabase.families():
+        fonts_dir = os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
+        for fn in ('arial.ttf', 'arialbd.ttf', 'ariali.ttf', 'segoeuil.ttf', 'segoeui.ttf',
+                   'segoeuib.ttf', 'segoeuii.ttf', 'seguisb.ttf', 'msgothic.ttc', 'meiryo.ttc', 'malgun.ttf'):
+            fp = os.path.join(fonts_dir, fn)
+            if os.path.isfile(fp):
+                QFontDatabase.addApplicationFont(fp)
+    return app
+
+
+def console_screens(art, smdh_path, released='', case_scan=False, name_override=None, publisher_override=None):
     """The start-up screens as the Wii U's Virtual Console draws a DS game's (the user's picture of one, 2026-11-14): "Virtual Console" at the
     top left, a large faint drawing of the console behind it all on the right, and across the middle a white band holding the game's art, the
     console's name, the game's name from its SMDH, and released ("Released in Europe: 2011", say), or its publisher without one. A GameTDB cover
     (case_scan: 768x680, the case's front) gives the case without the strip with the console's name down its side, shown whole.
     All of it is drawn here; none of it is Nintendo's artwork. {'bootTvTex.tga': rows, 'bootDrcTex.tga': rows}, as art_pixels gives them, or
     None if art can't be read."""
-    global _qt
     from PySide6.QtCore import QPointF, QRectF, Qt
-    from PySide6.QtGui import QColor, QFont, QGuiApplication, QImage, QLinearGradient, QPainter, QPainterPath, QPen
-    _qt = QGuiApplication.instance() or QGuiApplication([sys.argv[0]])
+    from PySide6.QtGui import QColor, QFont, QImage, QLinearGradient, QPainter, QPainterPath, QPen
+    _ensure_qt()
     cover = QImage(art)
     if cover.isNull():
         return None
     if case_scan:  # a GameTDB case scan: its white strip down the right goes, and the whole height stays (a logo can sit low on it)
         cover = cover.copy(0, 0, 684, 680)
     name, publisher = smdh_names(smdh_path)
+    name = name_override or name
+    publisher = publisher_override if publisher_override is not None else publisher
     img = QImage(1280, 720, QImage.Format_RGB888)
     p = QPainter(img)
     p.setRenderHint(QPainter.Antialiasing)
@@ -206,8 +228,149 @@ def console_screens(art, smdh_path, released='', case_scan=False):
     return {'bootTvTex.tga': rows(img), 'bootDrcTex.tga': rows(img.scaled(854, 480, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))}
 
 
+def minimal_3ds_screens(art, name, publisher='', fallback_icon=None, released=''):
+    """Compose the supplied Nintendo 3DS backdrop as a Virtual Console information card."""
+    from PySide6.QtCore import Qt, QPointF, QRectF
+    from PySide6.QtGui import QColor, QFont, QFontMetricsF, QImage, QPainter, QPainterPath, QPen
+    _ensure_qt()
+    template = QImage(THREEDS_TEMPLATE)
+    if template.isNull():
+        return None
+    cover = QImage(art) if art else QImage()
+    fallback_cover = False
+    if cover.isNull() and fallback_icon and os.path.isfile(fallback_icon):
+        pixels = icon_pixels(fallback_icon)
+        raw = bytes(channel for row in pixels for pixel in row for channel in pixel)
+        cover = QImage(raw, 48, 48, 48 * 3, QImage.Format_RGB888).copy()
+        fallback_cover = True
+    output = {}
+    for filename, width, height in (('bootTvTex.tga', 1280, 720), ('bootDrcTex.tga', 854, 480)):
+        image = QImage(width, height, QImage.Format_RGB888)
+        image.fill(QColor('#f4f4f4'))
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        painter.drawImage(image.rect(), template)
+
+        # Match StartupPreview.qml: the template already contains the clean white card and its shadow.
+
+        # The artwork fills the template frame edge to edge; game information sits in the right column.
+        inset = QRectF(width * 0.072, height * 0.289, width * 0.348, height * 0.505)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(242, 244, 247))
+        painter.drawRoundedRect(inset, width * 0.006, width * 0.006)
+        if not cover.isNull():
+            clip = QPainterPath()
+            painter.save()
+            if fallback_cover:
+                # Keep the game's small square icon proportional when there is no user photo.
+                fit = cover.scaled(int(inset.width()), int(inset.height()), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                placed = QRectF(inset.center().x() - fit.width() / 2, inset.center().y() - fit.height() / 2,
+                                fit.width(), fit.height())
+                clip.addRoundedRect(placed, width * 0.006, width * 0.006)
+                painter.setClipPath(clip)
+                painter.drawImage(placed, fit)
+            else:
+                # A supplied photo uses the entire template frame; scale it without cropping any edges.
+                fit = cover.scaled(int(inset.width()), int(inset.height()), Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+                clip.addRoundedRect(inset, width * 0.006, width * 0.006)
+                painter.setClipPath(clip)
+                painter.drawImage(inset, fit)
+            painter.restore()
+
+        info_x = width * 0.455
+        info_w = width * 0.465
+        logo = QImage(THREEDS_LOGO)
+        if not logo.isNull():
+            logo_box = QRectF(info_x, height * 0.295, width * 0.255, height * 0.068)
+            logo_fit = logo.scaled(int(logo_box.width()), int(logo_box.height()), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            painter.drawImage(QRectF(logo_box.x(), logo_box.y(), logo_fit.width(), logo_fit.height()), logo_fit)
+
+        title_box = QRectF(info_x, height * 0.385, info_w, height * 0.115)
+        title_font = QFont('Arial')
+        title_font.setPixelSize(max(18, int(height * 0.052)))
+        title_font.setWeight(QFont.Medium)
+        while title_font.pixelSize() > max(16, int(height * 0.038)):
+            bounds = QFontMetricsF(title_font).boundingRect(title_box, Qt.AlignLeft | Qt.AlignVCenter | Qt.TextWordWrap, name)
+            if bounds.height() <= title_box.height():
+                break
+            title_font.setPixelSize(title_font.pixelSize() - 1)
+        painter.setFont(title_font)
+        painter.setPen(QColor('#202124'))
+        painter.drawText(title_box, Qt.AlignLeft | Qt.AlignVCenter | Qt.TextWordWrap, name)
+
+        detail_font = QFont('Arial')
+        detail_font.setPixelSize(max(13, int(height * 0.032)))
+        detail_font.setWeight(QFont.Normal)
+        painter.setFont(detail_font)
+        if publisher:
+            painter.setPen(QColor('#3b3d40'))
+            painter.drawText(QRectF(info_x, height * 0.525, info_w, height * 0.06),
+                             Qt.AlignLeft | Qt.AlignVCenter | Qt.TextWordWrap, publisher)
+        if released:
+            painter.setPen(QColor('#3b3d40'))
+            painter.drawText(QRectF(info_x, height * 0.600, info_w, height * 0.06),
+                             Qt.AlignLeft | Qt.AlignVCenter | Qt.TextWordWrap, released)
+        painter.end()
+        output[filename] = RGBRows(image)
+    return output
+
+
+class RGBRows:
+    """A small, indexable RGB image view. Avoids allocating a Python tuple for every pixel."""
+    def __init__(self, image):
+        self.image = image
+        self.width, self.height = image.width(), image.height()
+        self.stride = image.bytesPerLine()
+        self.data = bytes(image.constBits())
+        self._rows = [RGBRow(self, y) for y in range(self.height)]
+
+    def __len__(self):
+        return self.height
+
+    def __getitem__(self, y):
+        if isinstance(y, slice):
+            return [self[row] for row in range(*y.indices(self.height))]
+        if y < 0:
+            y += self.height
+        if not 0 <= y < self.height:
+            raise IndexError(y)
+        return self._rows[y]
+
+
+class RGBRow:
+    def __init__(self, rows, y):
+        self.rows, self.y = rows, y
+        self._pixels = None
+
+    def __len__(self):
+        return self.rows.width
+
+    def __getitem__(self, x):
+        if isinstance(x, slice):
+            return [self[col] for col in range(*x.indices(self.rows.width))]
+        if x < 0:
+            x += self.rows.width
+        if not 0 <= x < self.rows.width:
+            raise IndexError(x)
+        if self._pixels is None:
+            at = self.y * self.rows.stride
+            self._pixels = [tuple(self.rows.data[at + col * 3:at + col * 3 + 3]) for col in range(self.rows.width)]
+        return self._pixels[x]
+
+
 def write_art_tga(path, rows, bpp):
     """rows of (r, g, b), top first, as the TGA the Wii U Menu expects (write_tga's layout)"""
+    if isinstance(rows, RGBRows) and bpp == 24:
+        from PySide6.QtGui import QImage
+        image = rows.image.convertToFormat(QImage.Format_BGR888)
+        stride, data = image.bytesPerLine(), bytes(image.constBits())
+        row_bytes = rows.width * 3
+        pixels = b''.join(data[y * stride:y * stride + row_bytes] for y in range(rows.height - 1, -1, -1))
+        header = struct.pack('<BBBHHBHHHHBB', 0, 0, 2, 0, 0, 0, 0, 0, rows.width, rows.height, bpp, 0)
+        with open(path, 'wb') as f:
+            f.write(header + pixels + TGA_FOOTER + bytes(4))
+        return
     h, w = len(rows), len(rows[0])
     pixels = bytearray()
     for row in reversed(rows):  # bottom-up
@@ -240,11 +403,11 @@ def bezel_pixels(path):
 
 
 def make_title(title, game, rpx, shaders, title_id, name, product, archives=ARCHIVES, art=None, icon_art=None, style='picture', released='', case_scan=False,
-               pad_bezel=None, pad_art=None, boot_sound=None):
+               pad_bezel=None, pad_art=None, boot_sound=None, publisher=None, disable_runtime_shaders=False):
     """title: the folder to make. game: the unpacked game (exheader.bin, code.bin, romfs.bin, exefs/icon.bin). rpx and shaders: what the build made.
     art: a picture for the start-up screens and the Wii U Menu icon, in place of the game's own 48x48 icon scaled up. icon_art: another
     picture for the icon alone (a square one, where art is a wide banner). style: 'picture' shows art as it is on the start-up screens,
-    'console' lays it out as the Wii U's Virtual Console shows a game (console_screens), with released ("Released in Europe: 2011") under its name; case_scan says art is a GameTDB case scan.
+    'console' uses the bundled minimal 3DS template at TV and GamePad resolution with the game's name and publisher; case_scan is retained for compatibility.
     pad_art: a picture of its own for the GamePad's start-up screen, shown as it is. boot_sound: the game's own start-up sound (a .btsnd,
     tools/make_boot_sound.py), in place of the one this PC has for every game."""
     rpx_name = os.path.basename(rpx)
@@ -267,7 +430,7 @@ def make_title(title, game, rpx, shaders, title_id, name, product, archives=ARCH
     write_tga(os.path.join(meta_dir, 'bootLogoTex.tga'), icon, 170, 42, 32, 0, (0, 0, 0))
     write_tga(os.path.join(meta_dir, 'bootDrcTex.tga'), icon, 854, 480, 24, 6, BACKGROUND)
     write_tga(os.path.join(meta_dir, 'bootTvTex.tga'), icon, 1280, 720, 24, 10, BACKGROUND)
-    screens = console_screens(art, os.path.join(game, 'exefs', 'icon.bin'), released, case_scan) if style == 'console' and art else None
+    screens = minimal_3ds_screens(art, name, publisher, os.path.join(game, 'exefs', 'icon.bin'), released) if style == 'console' else None
     for tga, w, h, bpp, picture in (('iconTex.tga', 128, 128, 32, icon_art or art), ('bootDrcTex.tga', 854, 480, 24, art), ('bootTvTex.tga', 1280, 720, 24, art)):
         rows = screens[tga] if screens and tga in screens else art_pixels(picture, w, h, (0, 0, 0)) if picture else None
         if rows:
@@ -288,8 +451,12 @@ def make_title(title, game, rpx, shaders, title_id, name, product, archives=ARCH
             sound = make_boot_sound.boot_sound(boot_sound)
         except (OSError, ValueError, EOFError) as e:
             print(f"the sound {boot_sound} can't be used ({e}): the one for every game is used")
-    if sound is None and os.path.isfile(every_game):
-        sound = open(every_game, 'rb').read()
+    if sound is None:
+        # A user-selected common sound wins; otherwise use the shipped Virtual Console sound.
+        for common in (every_game, os.path.join(ROOT, 'phase0', 'title_code', 'meta', 'bootSound.btsnd')):
+            if os.path.isfile(common):
+                sound = open(common, 'rb').read()
+                break
     if sound is not None:
         with open(os.path.join(meta_dir, 'bootSound.btsnd'), 'wb') as f:
             f.write(sound)
@@ -319,6 +486,14 @@ def make_title(title, game, rpx, shaders, title_id, name, product, archives=ARCH
             f.write(font)
     for f in ('shaders.gsh', 'shaders.idx'):
         shutil.copyfile(os.path.join(shaders, f), os.path.join(content, f))
+    # This title's Wii U DSI report points into CafeGLSL's NIR optimizer. Its
+    # generated build avoids that runtime compiler path; missing shaders use fallback.
+    if title_id.upper() in ('000500003D000540', '000500003D00053F', '000500003D00053E'):
+        open(os.path.join(content, 'noglslcompile'), 'wb').close()
+    if disable_runtime_shaders:
+        # CafeGLSL's runtime compiler can be disabled for a title diagnosed with
+        # an on-console compiler fault; missing shaders then use the CPU fallback.
+        open(os.path.join(content, 'noglslcompile'), 'wb').close()
     bezel = bezel_pixels(pad_bezel) if pad_bezel else None
     if bezel:  # the GamePad's picture where no screen is: the console reads its bytes as they are
         with open(os.path.join(content, 'pad_bezel.rgba'), 'wb') as f:

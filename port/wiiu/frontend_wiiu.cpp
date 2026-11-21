@@ -1,6 +1,7 @@
 // The Wii U frontend: guest threads share core 1 (the 2 MB L2), the GPU work runs on core 2, input and audio on core 0.
 // VBlank timing mirrors runtime/frontend.cpp. Files: the game in the title's content, saves in the title's save storage on the console (save_storage.cpp); the log goes to the PC over the network (net_console.cpp).
 #include <coreinit/context.h>
+#include <coreinit/core.h>
 #include <coreinit/debug.h>
 #include <coreinit/dynload.h>
 #include <coreinit/event.h>
@@ -120,6 +121,7 @@ void frontend_live_text(const std::string &) {}
 // itself, as if the system had said so: what a game does as it closes then runs in a check too.
 static volatile bool route_quit;
 void frontend_live_key(const std::string &key) {  // a route's "KEY <name>"
+    if (key == "menu") wiiu::menu_input(VPAD_BUTTON_STICK_L);  // as a click of the left stick: opens the options menu, or closes it
     if (key != "quit") return;
     if (wiiu::debug_flag("cemu")) route_quit = true;
     else wiiu::menu_quit_now();
@@ -294,7 +296,9 @@ static int hid_thread(int, void *) {
     VPADStatus st{};
     VPADTouchData cal{};
     u32 buttons = 0, pad_buttons = 0, pro_hold[4] = {};
-    float pad_x = 0, pad_y = 0, pro_x[4] = {}, pro_y[4] = {};
+    float pad_x = 0, pad_y = 0, pad_rx = 0, pad_ry = 0;
+    float pro_x[4] = {}, pro_y[4] = {}, pro_rx[4] = {}, pro_ry[4] = {};
+    bool pad_zl = false, pad_zr = false;
     s16 cx = 0, cy = 0;
     bool touch = false;
     u16 tx = 0, ty = 0;
@@ -304,15 +308,20 @@ static int hid_thread(int, void *) {
         VPADRead(VPAD_CHAN_0, &st, 1, &err);
         if (err == VPAD_READ_INVALID_CONTROLLER) {  // no GamePad: nothing held on it
             pad_buttons = 0;
-            pad_x = pad_y = 0;
+            pad_x = pad_y = pad_rx = pad_ry = 0;
+            pad_zl = pad_zr = false;
             touch = false;
         }
         if (err == VPAD_READ_SUCCESS) {
             pad_buttons = map_buttons(st.hold);
+            pad_zl = (st.hold & VPAD_BUTTON_ZL) != 0;
+            pad_zr = (st.hold & VPAD_BUTTON_ZR) != 0;
             presses |= st.trigger;
             wiiu::mic_blow(st.hold & VPAD_BUTTON_STICK_R);
             pad_x = st.leftStick.x;
             pad_y = st.leftStick.y;
+            pad_rx = st.rightStick.x;
+            pad_ry = st.rightStick.y;
             // The GamePad's sensors in the 3DS's frame: y comes out of the screen and z towards the player. 512 is 1g; 14.375 is a degree a second, and the GamePad's 1.0 is a turn a second.
             auto to_s16 = [](float v) { return (s16)std::clamp(v, -32767.0f, 32767.0f); };
             const VPADVec3D &ac = st.accelerometer.acc;
@@ -333,7 +342,9 @@ static int hid_thread(int, void *) {
             touch_was = down;
         }
         buttons = pad_buttons;
+        bool zl = pad_zl, zr = pad_zr;
         float sx = pad_x, sy = pad_y;
+        float rsx = pad_rx, rsy = pad_ry;
         for (int ch = 0; ch < 4; ch++) {
             KPADStatus ks{};
             KPADError kerr = KPAD_ERROR_OK;
@@ -342,19 +353,29 @@ static int hid_thread(int, void *) {
                 pro_hold[ch] = ks.pro.hold;
                 pro_x[ch] = ks.pro.leftStick.x;
                 pro_y[ch] = ks.pro.leftStick.y;
+                pro_rx[ch] = ks.pro.rightStick.x;
+                pro_ry[ch] = ks.pro.rightStick.y;
                 presses |= pro_as_gamepad(ks.pro.trigger);
             } else if (read || kerr == KPAD_ERROR_INVALID_CONTROLLER) {  // another kind of controller there, or none
                 pro_hold[ch] = 0;
-                pro_x[ch] = pro_y[ch] = 0;
+                pro_x[ch] = pro_y[ch] = pro_rx[ch] = pro_ry[ch] = 0;
             }
             buttons |= map_pro(pro_hold[ch]);
+            if (pro_hold[ch] & WPAD_PRO_BUTTON_ZL) zl = true;
+            if (pro_hold[ch] & WPAD_PRO_BUTTON_ZR) zr = true;
             if (std::fabs(pro_x[ch]) + std::fabs(pro_y[ch]) > std::fabs(sx) + std::fabs(sy)) {
                 sx = pro_x[ch];
                 sy = pro_y[ch];
             }
+            if (std::fabs(pro_rx[ch]) + std::fabs(pro_ry[ch]) > std::fabs(rsx) + std::fabs(rsy)) {
+                rsx = pro_rx[ch];
+                rsy = pro_ry[ch];
+            }
         }
         cx = (s16)(sx * 156.0f);
         cy = (s16)(sy * 156.0f);
+        s16 rx = (s16)(rsx * 156.0f);
+        s16 ry = (s16)(rsy * 156.0f);
         wiiu::menu_input(presses);
         if (!leaving && wiiu::menu_wants_quit()) {
             leaving = true;
@@ -380,6 +401,7 @@ static int hid_thread(int, void *) {
         }
         wiiu::input_override(buttons, touch, tx, ty);
         kernel::hid_update(buttons, cx, cy, touch, tx, ty);
+        kernel::ir_rst_update(zl, zr, rx, ry);
         if (kMeasure) {
             all_samples = all_samples + 1;
             if (kernel::guest_idle()) idle_samples = idle_samples + 1;
@@ -474,6 +496,7 @@ static char *put_hex(char *p, u32 v) {
 }
 
 static void report_stuck(const char *what) {
+    audio::emergency_silence();
     static char msg[2048];
     char *p = put_text(msg, what);
     p = put_text(p, "\nPlease send a photo of this screen.\nStage: ");
@@ -510,15 +533,17 @@ static void report_stuck(const char *what) {
         }
         p = put_text(p, "\n");
     }
-    // the game's own threads, two to a line: a thread's number, then what it's doing, then where
+    // the game's own threads, two to a line: a thread's number, then what it's doing (3DS status + Wii U state), then 3DS pc and lr
     u32 shown = 0;
-    for (u32 i = 0; i < 64 && shown < 24; i++) {
+    for (u32 i = 0; i < 64 && shown < 24 && (p - msg) < 1900; i++) {
         const auto *t = (const OSThread *)kernel::guest_host_thread(i);
         if (!t) continue;
+        u32 gst = 0, gpc = 0, glr = 0;
+        const bool have_g = kernel::guest_thread_regs(i, &gst, &gpc, &glr);
         p = put_text(p, "g");
-        p = put_hex(p, i << 8 | t->state);
-        p = put_hex(p, t->context.srr0);
-        p = put_hex(p, t->context.lr);
+        p = put_hex(p, i << 8 | ((gst & 0xf) << 4) | (t->state & 0xf));
+        p = put_hex(p, have_g ? gpc : t->context.srr0);
+        p = put_hex(p, have_g ? glr : t->context.lr);
         p = put_text(p, ++shown % 2 ? " " : "\n");
     }
     *p = 0;
@@ -795,11 +820,14 @@ static BOOL on_exception(OSContext *ctx, const char *what) {
         ctx->srr0 = (u32)gpu_trip;
         return TRUE;
     }
+    audio::emergency_silence();
     snprintf(msg, sizeof msg, "The game crashed: %s\npc %08x lr %08x\ncalled from %08x %08x\ndar %08x sp %08x\nframe %llu\n", what, ctx->srr0, ctx->lr, lr1, lr2, ctx->dar, ctx->gpr[1], (unsigned long long)g_frame);
     // the watchdog thread logs it: the exception's own stack is small, and this thread may hold the log's lock
     memcpy(crash_msg, msg, sizeof crash_msg);
     crash_pending = true;
-    for (const OSTime until = OSGetSystemTime() + OSMillisecondsToTicks(4000); crash_pending && OSGetSystemTime() < until;) {}
+    if (OSGetCoreId() != 0) {
+        for (const OSTime until = OSGetSystemTime() + OSMillisecondsToTicks(500); crash_pending && OSGetSystemTime() < until;) {}
+    }
     OSFatal(msg);
     return FALSE;
 }
@@ -822,6 +850,7 @@ int main(int argc, char **argv) {
     std::set_new_handler([] { report_stuck("Out of memory."); });
     std::set_terminate([] { report_stuck("The game stopped: terminate."); });
     g_fatal_hook = [](const char *m) {
+        audio::emergency_silence();
         let_card_catch_up();
         OSFatal(m);
     };
@@ -852,6 +881,8 @@ int main(int argc, char **argv) {
     std::filesystem::create_directories(kernel::save_root(), no_save);
     if (!wiiu::test_run())  // services/fs.cpp's folder for the game's save (archive_dir)
         wiiu::save_from_content(std::string(CONTENT_DIR) + "/save_import", kernel::save_root() + "/savedata", kernel::save_root() + "/save_imported");
+    struct stat no_menu;
+    if (stat((std::string(CONTENT_DIR) + "/no_menu").c_str(), &no_menu) == 0) wiiu::menu_disable();  // built with "In-game menu: Off"
     rt_log_open(wiiu::data_dir() + "/log.txt");
     if (FILE *f = fopen((wiiu::data_dir() + "/logsync").c_str(), "rb")) {  // debug aid: each line to the card as it's logged (core.cpp)
         fclose(f);
@@ -881,6 +912,7 @@ int main(int argc, char **argv) {
     }
     LOG("[wiiu] guest memory at %p\n", g_mem);
     settings_load();
+    if (wiiu::debug_flag("showfps")) g_settings.show_fps = true;  // a test run's picture of the counter, as the menu's FPS COUNTER: ON gives it
     // the Wii U's language: a game takes it when its region has it, until the player picks another in the options menu (services/cfg.cpp)
     if (const UCHandle uc = UCOpen(); uc >= 0) {
         u32 language = 0;
@@ -902,6 +934,20 @@ int main(int argc, char **argv) {
                 s == me ? ", the current account" : "");
             if (s == me) kernel::g_host_my_mii = (int)kernel::g_host_miis.size();
             kernel::g_host_miis.push_back(m);
+        }
+        // MOD: should the slot number not match (GetSlotNo can differ from the loop's numbering), the current account's Mii is asked
+        // for directly and found among the others by its id, so the player's own Mii is never taken for another user's
+        FFLStoreData cur;
+        if (kernel::g_host_my_mii < 0 && nn::act::GetMii(&cur).IsSuccess()) {
+            std::array<u8, 0x60> m;
+            memcpy(m.data(), &cur, 0x60);
+            for (size_t i = 0; i < kernel::g_host_miis.size() && kernel::g_host_my_mii < 0; i++)
+                if (!memcmp(&kernel::g_host_miis[i][0x0C], &m[0x0C], 10)) kernel::g_host_my_mii = (int)i;
+            if (kernel::g_host_my_mii < 0) {
+                kernel::g_host_my_mii = (int)kernel::g_host_miis.size();
+                kernel::g_host_miis.push_back(m);
+            }
+            LOG("[wiiu] current account's Mii found by GetMii: %d\n", kernel::g_host_my_mii);
         }
         nn::act::Finalize();
     }

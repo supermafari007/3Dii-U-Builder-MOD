@@ -20,6 +20,7 @@ AXVoice *voice[2];
 u32 write_pos;
 bool playing;
 std::atomic<float> gain{1.0f};
+std::atomic<bool> silenced{false};
 
 void start_voices() {
     for (int c = 0; c < 2; c++) {
@@ -80,11 +81,29 @@ void init() {
 void set_volume(float v) { gain = v; }
 // silence while the HOME Menu is up: the voices would otherwise repeat what's in the ring
 void pause(bool on) {
-    if (!playing || !voice[0] || !voice[1]) return;
+    if (silenced.load(std::memory_order_acquire) || !playing || !voice[0] || !voice[1]) return;
     for (int c = 0; c < 2; c++) {
         AXVoiceBegin(voice[c]);
         AXSetVoiceState(voice[c], on ? AX_VOICE_STATE_STOPPED : AX_VOICE_STATE_PLAYING);
         AXVoiceEnd(voice[c]);
+    }
+}
+// Immediately silence looping AX voices and zero the ring buffers on crash or freeze so the DSP never repeats a constant beep.
+void emergency_silence() {
+    silenced.store(true, std::memory_order_release);
+    playing = false;
+    for (int c = 0; c < 2; c++) {
+        if (ring[c]) {
+            memset(ring[c], 0, RING * 2);
+            DCFlushRange(ring[c], RING * 2);
+        }
+        if (voice[c]) {
+            AXVoiceBegin(voice[c]);
+            AXSetVoiceState(voice[c], AX_VOICE_STATE_STOPPED);
+            AXVoiceVeData ve{};
+            AXSetVoiceVe(voice[c], &ve);
+            AXVoiceEnd(voice[c]);
+        }
     }
 }
 // Safe with the audio thread still running: host_output and pause do nothing once the voices are gone
@@ -99,7 +118,7 @@ void shutdown() {
 
 namespace hle {
 void host_output(const Sample *samples, size_t n) {
-    if (!voice[0] || !voice[1]) return;
+    if (silenced.load(std::memory_order_acquire) || !voice[0] || !voice[1]) return;
     if (playing) {
         // keep a steady distance: on an underrun or a pile-up, jump to where the cushion should be
         const u32 distance = (write_pos + RING - play_pos()) % RING;

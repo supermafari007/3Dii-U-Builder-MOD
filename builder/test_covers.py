@@ -128,8 +128,8 @@ with tempfile.TemporaryDirectory() as tmp:
         assert covers.released('CTR-P-AMKE', elsewhere, tdb) == '' and not os.path.exists(os.path.join(elsewhere, '3dstdb.zip')), n
     assert covers.released('CTR-P-AMKE', elsewhere, base + '/short.zip') == '' and not os.path.exists(os.path.join(elsewhere, '3dstdb.zip'))
     cut.clear()
-    assert covers.released('CTR-P-AMKE', elsewhere, tdb) == 'Released in North America: 2011' and os.path.isfile(os.path.join(elsewhere, '3dstdb.zip'))
-    assert covers.released('CTR-P-AMKE', tmp, tdb) == 'Released in North America: 2011'
+    assert covers.released('CTR-P-AMKE', elsewhere, tdb) == 'Lanzado en América: 2011' and os.path.isfile(os.path.join(elsewhere, '3dstdb.zip'))
+    assert covers.released('CTR-P-AMKE', tmp, tdb) == 'Lanzado en América: 2011'
     before = len(asked)
     assert covers.released('CTR-N-AMKP', tmp, tdb) == '' and covers.released('CTR-P-BXXP', tmp, tdb) == '' and covers.released('x', tmp, tdb) == ''
     assert len(asked) == before  # kept: nothing asked again

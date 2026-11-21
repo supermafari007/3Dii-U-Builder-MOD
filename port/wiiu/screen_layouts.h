@@ -95,4 +95,49 @@ inline bool pad_touch(int layout, uint32_t x, uint32_t y, uint32_t dw, uint32_t 
     ty = (y - r.y) * 240 / r.h;
     return true;
 }
+
+// Full-screen variants that use all available TV / GamePad dimensions when displaying a screen
+inline bool tv_rect_fill(int layout, int which, uint32_t tw, uint32_t th, Rect &r) {
+    if (layout == 0) {
+        if (which) return false;
+        r = Rect{0, 0, tw, th};
+        return true;
+    }
+    if (layout == 4) {
+        if (!which) return false;
+        r = Rect{0, 0, tw, th};
+        return true;
+    }
+    if (layout == 1) {
+        const uint32_t w0 = tw * 5 / 9;
+        r = which == 0 ? Rect{0, 0, w0, th} : Rect{w0, 0, tw - w0, th};
+        return true;
+    }
+    return tv_rect(layout, which, tw, th, r);
+}
+
+inline bool pad_rect_fill(int layout, int which, uint32_t dw, uint32_t dh, Rect &r, uint32_t &band0, uint32_t &band1) {
+    if (layout == 0) {
+        if (!which) return false;
+        r = Rect{0, 0, dw, dh};
+        band0 = 0; band1 = dh;
+        return true;
+    }
+    if (layout == 1) {
+        if (which) return false;
+        r = Rect{0, 0, dw, dh};
+        band0 = 0; band1 = dh;
+        return true;
+    }
+    return pad_rect(layout, which, dw, dh, r, band0, band1);
+}
+
+inline bool pad_touch_fill(int layout, uint32_t x, uint32_t y, uint32_t dw, uint32_t dh, uint32_t &tx, uint32_t &ty) {
+    Rect r;
+    uint32_t b0, b1;
+    if (!pad_rect_fill(layout, 1, dw, dh, r, b0, b1) || x < r.x || x >= r.x + r.w || y < r.y || y >= r.y + r.h) return false;
+    tx = (x - r.x) * 320 / r.w;
+    ty = (y - r.y) * 240 / r.h;
+    return true;
+}
 }  // namespace screens

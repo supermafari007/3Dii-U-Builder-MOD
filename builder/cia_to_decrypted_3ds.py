@@ -131,11 +131,38 @@ def convert_and_decrypt(cia_path, out_3ds_path=None, makerom_path=None):
     print(f"=======================================================")
 
     # Step 1: Repackage CIA to CCI container using makerom
+    # makerom.exe on Windows uses ANSI fopen(), so non-ASCII paths (e.g. Unicode Roman numeral Ⅳ)
+    # fail silently. Stage an ASCII hardlink/copy beside out_3ds_path when needed.
     print("[1/3] Converting CIA container to CCI (.3ds)...")
-    cmd = [makerom_path, "-ciatocci", cia_path, "-o", out_3ds_path, "-target", "p"]
-    proc = subprocess.run(cmd, capture_output=True, text=True, creationflags=0x08000000 if os.name == "nt" else 0)
-    if proc.returncode != 0:
-        print(f"[!] makerom failed: {proc.stderr or proc.stdout}")
+    makerom_in = cia_path
+    temp_cia = None
+    if os.name == "nt" and not cia_path.isascii():
+        temp_cia = os.path.join(os.path.dirname(os.path.abspath(out_3ds_path)), "_input_ascii.cia")
+        try:
+            if os.path.exists(temp_cia):
+                os.remove(temp_cia)
+            try:
+                os.link(cia_path, temp_cia)
+            except OSError:
+                import shutil
+                shutil.copy2(cia_path, temp_cia)
+            makerom_in = temp_cia
+        except Exception as e:
+            print(f"[!] Could not stage ASCII path for makerom: {e}")
+            return False
+
+    try:
+        cmd = [makerom_path, "-ciatocci", makerom_in, "-o", out_3ds_path, "-target", "p"]
+        proc = subprocess.run(cmd, capture_output=True, text=True, creationflags=0x08000000 if os.name == "nt" else 0)
+    finally:
+        if temp_cia and os.path.exists(temp_cia):
+            try:
+                os.remove(temp_cia)
+            except OSError:
+                pass
+
+    if proc.returncode != 0 or not os.path.isfile(out_3ds_path):
+        print(f"[!] makerom failed (rc={proc.returncode}): {proc.stderr or proc.stdout}")
         return False
 
     return decrypt_in_place(out_3ds_path) and verify(out_3ds_path)

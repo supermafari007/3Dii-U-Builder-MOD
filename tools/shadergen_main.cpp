@@ -204,6 +204,7 @@ int main(int argc, char **argv) {
     const u32 passthrough = add_vs(gen_passthrough_vs());
     const u32 blit_vs = add_vs(gen_blit_vs());
     u32 failed = 0;
+    std::set<std::pair<u32, u32>> failed_seen;
     for (const VsRecord &r : vs_records) {
         std::vector<u32> code = r.code, swz = r.swz;
         const u32 nc = (u32)code.size(), ns = (u32)swz.size();
@@ -219,6 +220,9 @@ int main(int argc, char **argv) {
             if ((mask >> i) & 1) bits.push_back(i);
         const u32 combos = bits.size() <= kVsBoolsMade ? 1u << bits.size() : 1;
         const u8 (*iu)[4] = (const u8 (*)[4])r.iu;
+        u32 own = 0;  // the record's own set
+        for (u32 i = 0; i < 16; i++)
+            if (r.b[i]) own |= 1u << i;
         for (u32 c = 0; c < combos; c++) {
             bool b[16];
             memcpy(b, r.b, 16);
@@ -227,9 +231,15 @@ int main(int argc, char **argv) {
             u32 bm = 0;
             for (u32 i = 0; i < 16; i++)
                 if (b[i]) bm |= 1u << i;
+            // a made-up set under which the program never ends: no game draws with it
+            if (bm != own && !shader_ends(p, r.entry, bm)) continue;
             u32 inputs = 0;
             const std::string src = gen_vs_glsl(p, r.entry, bm, iu, r.slots, &inputs);
             if (src.empty()) {
+                if (!failed_seen.count({r.entry, bm})) {
+                    failed_seen.insert({r.entry, bm});
+                    printf("not translated: entry %03x, bools %04x: shader.cpp line %d gave up at instruction %03x\n", r.entry, bm, gpu::shader_glsl_fail_line, gpu::shader_glsl_fail_at);
+                }
                 failed++;
                 continue;
             }

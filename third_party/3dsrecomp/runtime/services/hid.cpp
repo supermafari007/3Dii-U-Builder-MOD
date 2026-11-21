@@ -281,6 +281,7 @@ void hid_update(u32 buttons, s16 cx, s16 cy, bool touch, u16 tx, u16 ty) {
     w32(b + 0xC4, touch ? 1 : 0);
     hid.ev_pad0->signal();
     hid.ev_pad1->signal();
+    uds_tick();
     if (hid.accel_on && !getenv("RECOMP_NO_ACCEL")) {
         u32 aidx = (r32(b + 0x118) + 1) % 8;
         if (aidx == 0) {
@@ -365,9 +366,87 @@ struct Hid : Service {
     }
 };
 
+// New 3DS C-Stick + ZL/ZR via ir:rst
+namespace {
+struct IrRstState {
+    std::shared_ptr<SharedMem> shm;
+    std::shared_ptr<Event> ev = make_event(ONESHOT, "IR_RST");
+    u32 last_state = 0;
+    std::atomic<bool> active{false};
+    bool raw_cstick = false;
+};
+IrRstState ir_rst;
+}  // namespace
+
+static void ensure_ir_rst_shm() {
+    if (ir_rst.shm) return;
+    ir_rst.shm = std::make_shared<SharedMem>();
+    ir_rst.shm->name = "IR_RST";
+    ir_rst.shm->size = 0x98;
+    ir_rst.shm->backing = mem::hle_alloc(0x1000);
+}
+
+void ir_rst_update(bool zl, bool zr, s16 rx, s16 ry) {
+    if (!ir_rst.active.load()) return;
+    Lock lk(kmutex);
+    if (!ir_rst.active.load() || !ir_rst.shm) return;
+    u32 b = ir_rst.shm->backing;
+    u64 now = system_tick();
+    u32 state = 0;
+    if (zl) state |= 1u << 14;
+    if (zr) state |= 1u << 15;
+    if (!ir_rst.raw_cstick) {
+        const int th = 41;
+        if (rx >= th) state |= 1u << 24;   // c_stick_right
+        if (rx <= -th) state |= 1u << 25;  // c_stick_left
+        if (ry >= th) state |= 1u << 26;   // c_stick_up
+        if (ry <= -th) state |= 1u << 27;  // c_stick_down
+    }
+    u32 idx = (r32(b + 0x10) + 1) % 8;
+    if (idx == 0) {
+        w64(b + 0x08, r64(b + 0x00));
+        w64(b + 0x00, now);
+    }
+    w32(b + 0x10, idx);
+    u32 e = b + 0x18 + idx * 0x10;
+    w32(e + 0x00, state);
+    w32(e + 0x04, state & ~ir_rst.last_state);
+    w32(e + 0x08, ir_rst.last_state & ~state);
+    w16(e + 0x0C, (u16)rx);
+    w16(e + 0x0E, (u16)ry);
+    ir_rst.last_state = state;
+    ir_rst.ev->signal();
+}
+
+struct IrRst : Service {
+    using Service::Service;
+    void handle(IPC &ipc) override {
+        switch (ipc.cmd()) {
+        case 0x0001:  // GetHandles
+            ensure_ir_rst_shm();
+            ipc.ok(1, 3);
+            ipc.handles(2, {ir_rst.shm, ir_rst.ev});
+            break;
+        case 0x0002:  // Initialize(period_ms, raw_cstick)
+            ensure_ir_rst_shm();
+            ir_rst.raw_cstick = (ipc[2] & 0xFF) != 0;
+            ir_rst.active = true;
+            ipc.ok();
+            break;
+        case 0x0003:  // Shutdown
+            ir_rst.active = false;
+            ipc.ok();
+            break;
+        default:
+            unimplemented(ipc);
+        }
+    }
+};
+
 void register_hid() {
     register_service(std::make_shared<Hid>("hid:USER"));
     register_service(std::make_shared<Hid>("hid:SPVR"));
+    register_service(std::make_shared<IrRst>("ir:rst"));
 }
 
 }  // namespace kernel

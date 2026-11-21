@@ -29,6 +29,7 @@ base = tempfile.mkdtemp()
 settings = os.path.join(base, 'settings.json')
 gui.settings_file = lambda: settings  # the user's settings are never read or written, on any platform
 gui.updater.home = lambda: os.path.join(base, 'app')  # nor the downloaded versions' folder
+gui.updater.own_tag = lambda: ''  # simulate an untagged development build even when run through the frozen runner
 os.makedirs(os.path.join(base, 'keys'))
 json.dump({'keys': os.path.join(base, 'keys')}, open(settings, 'w'))  # an empty key folder: the user's keys are never looked at
 try:
@@ -69,6 +70,18 @@ try:
     missing = sorted(n for n in used if not hasattr(state, n))
     assert not missing, f'Main.qml uses app.{missing}, which App lacks'
 
+    # Basic metadata edits persist by title ID and update the displayed values.
+    state.game = type('Game', (), {'title_id': 0x1234, 'path': 'C:/game.3ds'})()
+    state.set(gameName='Original title', maker='Original maker')
+    old_get_text = gui.QInputDialog.getText
+    metadata_answers = iter((('Edited title', True), ('Edited publisher', True)))
+    gui.QInputDialog.getText = lambda *a, **k: next(metadata_answers)
+    state.editMetadata()
+    gui.QInputDialog.getText = old_get_text
+    assert (state.gameName, state.maker) == ('Edited title', 'Edited publisher')
+    assert json.load(open(settings))['metadata']['0000000000001234'] == {'name': 'Edited title', 'publisher': 'Edited publisher'}
+    state.game = None
+
     art = os.path.join(base, 'art.png')
     img = QImage(64, 64, QImage.Format_RGB32)
     img.fill(QColor('teal'))
@@ -92,7 +105,7 @@ try:
     state.set(hasGame=True, hasArt=True, hasIconArt=True, hasBezel=True, hasPadArt=True, hasGameSound=True, artText='A picture.png', iconText='An icon.png',
               bezelText='A bezel.png', padArtText='A GamePad picture.png', gameSoundText='Its own')  # every line of the art menu
     menu = win.findChild(QObject, 'artMenu')
-    art_pill = next(p for p in items(QQuickWindow.contentItem(win)) if p.objectName() == 'pill' and p.property('accessibleName') == 'Art and icon')
+    art_pill = next(p for p in items(QQuickWindow.contentItem(win)) if p.objectName() == 'pill' and p.property('accessibleName') == 'Imagen e icono')
     QMetaObject.invokeMethod(menu, 'openAt', Q_ARG('QVariant', art_pill))  # as the pill does: under it, its first line focused
     settle('the art menu')
     assert menu.property('visible') and not win.findChild(QObject, 'pages').property('enabled'), 'Tab reaches the pages behind the art menu'
@@ -230,7 +243,7 @@ try:
     assert state.updateTitle == 'Builder 9.9' and len(state.updateNotes) == 400
     win.setProperty('page', 'build')
     settle('the offer')
-    pill('Update')
+    pill('Actualizar')
     win.setProperty('page', 'help')
     settle('the offer on the Help page')
     win.setProperty('page', 'build')
@@ -277,7 +290,7 @@ try:
     state.set(updateState='ready', building=True)
     up.current = lambda own: calls.__setitem__('current', True)
     state.restartForUpdate()
-    assert state.dialog and 'build' in state.dialog['title'].lower() and 'current' not in calls, 'a restart during a build must be refused'
+    assert state.dialog and 'compilación' in state.dialog['title'].lower() and 'current' not in calls, 'a restart during a build must be refused'
     state.answer(True)
     state.set(building=False)
 
@@ -285,7 +298,7 @@ try:
     up.current, up.hand_over = lambda own: 'new.exe', lambda exe, argv: held.wait(10)
     state.restartForUpdate()
     settle('restarting')
-    assert state.updateState == 'restarting' and not pill('Build It!').property('enabled'), 'a build can start during the restart'
+    assert state.updateState == 'restarting' and not pill('¡Compilar!').property('enabled'), 'a build can start during the restart'
     held.set()
     done('a restart')
     assert calls['quit'] == 1 and calls['stopped'] == 1, 'the app must cancel a build and quit once the new version is up'
@@ -294,7 +307,7 @@ try:
     up.hand_over = lambda exe, argv: False
     state.restartForUpdate()
     done('a restart that failed')
-    assert state.updateState == 'failed' and 'keeps running' in state.updateMessage and calls['quit'] == 1
+    assert state.updateState == 'failed' and 'seguirá ejecutándose' in state.updateMessage and calls['quit'] == 1
     before = calls['download']
     state.startUpdate()  # Try again: the whole update again, which clears its failed mark
     done('trying again')
@@ -413,7 +426,7 @@ try:
     state.chooseGameSound()
     kept = json.load(open(settings))['boot_sound'][title]
     assert kept == os.path.join(gui.GAME_SOUNDS, title + '.btsnd'), ('the game\'s sound went somewhere else, the sound for every game, say', kept)
-    assert state.game_sound == kept and os.path.isfile(kept) and state.hasGameSound and state.gameSoundText == 'Its own', kept
+    assert state.game_sound == kept and os.path.isfile(kept) and state.hasGameSound and state.gameSoundText == 'Propio', kept
     state.removeGameSound()
     assert state.game_sound is None and not state.hasGameSound and not os.path.exists(kept) and title not in json.load(open(settings))['boot_sound']
     assert state.gameSoundText == gui.NO_GAME_SOUND

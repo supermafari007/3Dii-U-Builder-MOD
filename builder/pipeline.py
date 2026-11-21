@@ -12,6 +12,7 @@ Lines starting with @ are for the app: @stage <name>, @progress <0-100>, @done <
 It builds with tools/win/build3ds.py, in folders of its own (builder_work/, build_win_builder/), so it never touches the nine ports' builds."""
 import argparse
 import filecmp
+import glob
 import io
 import json
 import os
@@ -22,7 +23,8 @@ import sys
 import threading
 import types
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+_HERE_RAW = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(_HERE_RAW) if _HERE_RAW.lower().endswith('.zip') else _HERE_RAW
 ROOT = os.environ.get('THREEDII_ROOT') or os.path.dirname(HERE)  # the standalone app runs from elsewhere: app.py finds the repository
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(ROOT, 'tools', 'win'))
@@ -95,6 +97,38 @@ def fail(why):
     sys.exit(1)
 
 
+def check_compiler_policy():
+    """Check the bundled PowerPC compiler before spending time unpacking a game.
+
+    Windows security policy can block either the driver (g++.exe) or its C++
+    frontend (cc1plus.exe). Checking both here turns a late/repeated compile
+    failure into one actionable error at the start of the build.
+    """
+    exe = '.exe' if os.name == 'nt' else ''
+    devkitpro = os.environ.get('THREEDII_DEVKITPRO') or ('C:/devkitPro/opt/devkitpro' if os.name == 'nt' else '/opt/devkitpro')
+    compiler = os.path.join(devkitpro, 'devkitPPC', 'bin', 'powerpc-eabi-g++' + exe)
+    frontends = sorted(glob.glob(os.path.join(devkitpro, 'devkitPPC', 'libexec', 'gcc', 'powerpc-eabi', '*', 'cc1plus' + exe)))
+    if not os.path.isfile(compiler):
+        fail(f'No se encuentra powerpc-eabi-g++{exe}, el compilador de Wii U. Repara o vuelve a extraer el paquete completo de 3Dii U Builder.')
+    if not frontends:
+        fail(f'No se encuentra cc1plus{exe}, el compilador C++ de devkitPPC. Repara o vuelve a extraer el paquete completo de 3Dii U Builder.')
+    probes = [(compiler, 'powerpc-eabi-g++' + exe), (frontends[-1], 'cc1plus' + exe)]
+    for executable, label in probes:
+        try:
+            result = subprocess.run([executable, '--version'], capture_output=True, text=True, errors='replace', timeout=15,
+                                    creationflags=0x08000000 if os.name == 'nt' else 0)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            fail(f'Windows no permite iniciar {label}; la compilación se detuvo antes de extraer el juego. '
+                 'Revisa Seguridad de Windows > Historial de protección para ver si bloqueó este compilador. '
+                 'Si el archivo proviene del paquete oficial de 3Dii U Builder, restaura o permite ese archivo desde el historial; '
+                 'no desactives la protección completa. Si es un equipo administrado, solicita al administrador que revise el bloqueo. '
+                 f'Detalle: {e}')
+        if result.returncode:
+            fail(f'No se pudo iniciar {label}; la compilación se detuvo antes de extraer el juego. '
+                 'Revisa Seguridad de Windows > Historial de protección y el registro de Integridad de código. '
+                 f'Detalle: {(result.stderr or result.stdout).strip()[:400]}')
+
+
 def profile_for(dump):
     compat = json.load(open(os.path.join(HERE, 'compat.json'), encoding='utf-8'))
     return compat.get('%016X' % dump.title_id)
@@ -126,11 +160,11 @@ def tool(name):
 
 
 def make_title(game_dir, out, info, art=None, icon_art=None, style='picture', released='', case_scan=False, pad_bezel=None, pad_art=None,
-               boot_sound=None):
+               boot_sound=None, disable_runtime_shaders=False):
     """the title every game gets (tools/make_game_title.py), then the update's and DLC's files beside the game's"""
     tool('make_game_title').make_title(os.path.join(out, 'title'), game_dir, os.path.join(out, info['slug'] + '.rpx'), os.path.join(out, 'shaders'),
                                        info['title_id'], info['name'], info['product'], ARCHIVES, art, icon_art, style, released, case_scan, pad_bezel,
-                                       pad_art, boot_sound)
+                                       pad_art, boot_sound, info.get('publisher'), disable_runtime_shaders)
     content = os.path.join(out, 'title', 'content')
     for f in os.listdir(game_dir):
         if f.startswith(('update_', 'dlc_')):
@@ -152,6 +186,8 @@ def copy_to(source, target_dir):
                 o.write(chunk)
                 done += len(chunk)
                 PROGRESS.at(done / total * 0.8)
+            o.flush()
+            os.fsync(o.fileno())
     if any(filecmp.cmpfiles(source, new, names, shallow=False)[1:]):
         shutil.rmtree(new, ignore_errors=True)
         fail('La copia no coincide con el original: es posible que la tarjeta esté fallando. No se reemplazó ningún archivo.')
@@ -172,6 +208,39 @@ class ShowCredits(argparse.Action):
         parser.exit()
 
 
+MK7_TITLE_IDS = {0x0004000000030600, 0x0004000000030700, 0x0004000000030800, 0x0004000000030A00, 0x0004000000083800}
+TRIFORCE_TITLE_IDS = {0x0004000000176F00, 0x0004000000177000, 0x0004000000177100}
+PRETENDO_ONLINE_TITLE_IDS = MK7_TITLE_IDS | TRIFORCE_TITLE_IDS
+
+
+def allocate_mk7_friend_code(work_dir):
+    """Generate a random 3DS Principal ID + Friend Code that has never been used in any prior build."""
+    import hashlib, secrets, struct
+    reg_path = os.path.join(work_dir, 'mk7_friend_codes.json')
+    try:
+        with open(reg_path, encoding='utf-8') as f:
+            reg = json.load(f)
+    except (OSError, ValueError):
+        reg = {}
+    used_pids = set(reg.get('used_pids', []))
+    used_fcs = set(reg.get('used_fcs', []))
+    while True:
+        pid = 0x40000000 + secrets.randbelow(0x3FFFFFFE)
+        if pid in used_pids:
+            continue
+        chk = hashlib.sha1(struct.pack('<I', pid)).digest()[0] >> 1
+        fc = (chk << 32) | pid
+        if fc in used_fcs:
+            continue
+        break
+    used_pids.add(pid)
+    used_fcs.add(fc)
+    os.makedirs(work_dir, exist_ok=True)
+    with open(reg_path, 'w', encoding='utf-8') as f:
+        json.dump({'used_pids': sorted(used_pids), 'used_fcs': sorted(used_fcs)}, f, indent=2)
+    return pid, fc
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--version', action='version', version=f'{credits.APP} {credits.VERSION} ({credits.LICENCE}, {credits.SOURCE})')
@@ -188,15 +257,19 @@ def main():
     ap.add_argument('--out', help='a folder to put the WUP in instead')
     ap.add_argument('--keep', action='store_true', help='keep the work files, for a quicker rebuild')
     ap.add_argument('--art', help="a picture (the cover art, say) for the start-up screens and the Wii U Menu icon; the game's own icon otherwise")
+    ap.add_argument('--name', help='the title shown in the Wii U Menu and the 3DS information screen')
+    ap.add_argument('--publisher', help='the publisher shown on the 3DS information screen')
     ap.add_argument('--icon-art', help='a square picture for the Wii U Menu icon alone, where --art is a wide banner')
     ap.add_argument('--pad-bezel', help="a picture (854x480, say) the GamePad shows where it shows no screen, a bezel or overlay; black otherwise")
     ap.add_argument('--pad-art', help="a picture of its own for the GamePad's start-up screen, shown as it is; the TV's otherwise")
     ap.add_argument('--boot-sound', help="the game's own start-up sound, a .btsnd (tools/make_boot_sound.py); the one for every game otherwise")
     ap.add_argument('--save', help="a 3DS save to pack in, which the game takes on the console (saves.py): Checkpoint's, JKSM's or an emulator's folder")
+    ap.add_argument('--no-menu', action='store_true', help='leave out the in-game options menu')
     ap.add_argument('--art-style', choices=('picture', 'console'), default='console',
                     help='the start-up screens: laid out as the Virtual Console shows a game, or --art as it is')
     ap.add_argument('--tdb', help="a folder for GameTDB's list of 3DS games, where the Virtual Console's screens find the year a game came out")
     ap.add_argument('--mixed', action='store_true', help='trial: fast code with only the video decoder in safe mode (build3ds.Game.mixed)')
+    ap.add_argument('--mk7-online', action='store_true', help='exclusive Mario Kart 7 Pretendo 3DS online mode with unique Friend Code per build')
     ap.add_argument('--cold', action='store_true', help="for the checks: build it as a game nobody has built before, with none of this PC's lists of "
                                                         'its code and shaders (tools/check_ports.py --cold)')
     ap.add_argument('--jobs', type=int, default=max(1, (os.cpu_count() or 2) // 2))
@@ -206,6 +279,7 @@ def main():
             s.reconfigure(errors='backslashreplace')
     if sys.platform != 'win32':
         fail('La compilación en Linux todavía no está disponible: esta versión compila en Windows.')
+    check_compiler_policy()
     if not (a.card or a.out):
         fail('Selecciona una tarjeta SD o una carpeta para el WUP.')
     problem = user_files.check_otp(a.otp)
@@ -239,6 +313,10 @@ def main():
     dlc = next((d for d in extras if d.kind == 'dlc'), None)
     known = None if a.cold else profile_for(game)
     info = dict(known or derived(game))
+    if a.name and a.name.strip():
+        info['name'] = ' '.join(a.name.split())
+    if a.publisher is not None:
+        info['publisher'] = ' '.join(a.publisher.split())
     if update:
         info['slug'] += f'_v{update.version}'
     if a.cold:
@@ -343,7 +421,7 @@ def main():
     learned = os.path.join(ROOT, 'games', known['slug'] if known else info['slug'], 'functions.txt')
     if not (known and update) and os.path.isfile(learned):
         shutil.copyfile(learned, g.extra_functions)
-    if known and not update and not any(m.changes_code() for m in mod_list):
+    if known and os.path.isfile(learned) and not update and not any(m.changes_code() for m in mod_list):
         print('code entries: what this game\'s tested builds found', flush=True)
     else:
         env = dict(os.environ, RECOMP_CRO_BASE=b3.CRO_BASE)
@@ -354,7 +432,14 @@ def main():
             if r.returncode:
                 fail(f'Falló {tool}')
 
-    args = types.SimpleNamespace(jobs=a.jobs, force=False, extra_flags=None, only=None, opt=None)
+    extra_rt_flags, rt_tag = None, None
+    if a.mk7_online and game.title_id in PRETENDO_ONLINE_TITLE_IDS:
+        pid, fc = allocate_mk7_friend_code(WORK)
+        fc_s = f'{fc:012d}'
+        print(f'[mk7-online] Pretendo 3DS activo | PID=0x{pid:08X} | Friend Code={fc_s[:4]}-{fc_s[4:8]}-{fc_s[8:12]}', flush=True)
+        extra_rt_flags = f'-DMK7_PRETENDO_ONLINE=1 -DMK7_PRINCIPAL_ID=0x{pid:08x}u -DMK7_FRIEND_CODE=0x{fc:016x}ull'
+        rt_tag = f'mk7_{pid:08x}'
+    args = types.SimpleNamespace(jobs=a.jobs, force=False, extra_flags=extra_rt_flags, only=None, opt=None, rt_tag=rt_tag)
     sys.stdout = held = Held(Watch(sys.__stdout__, PROGRESS), b3.context)
     shader_stop = []
 
@@ -389,7 +474,7 @@ def main():
 
     PROGRESS.stage('Creando el título')
     released, case_scan = '', False
-    if a.art and a.art_style == 'console' and a.tdb:
+    if a.art_style == 'console' and a.tdb:
         import covers  # only here: the one download a build may make, and only with the Virtual Console's screens chosen
         released = covers.released(game.product, a.tdb)
         case_scan = covers.is_case_scan(a.art, a.tdb)  # the folder is the covers' own
@@ -400,8 +485,10 @@ def main():
             saves.pack(a.save, os.path.join(out, 'title', 'content'))
         except (saves.SaveError, OSError) as e:
             fail(f"No se pudo incluir la partida de 3DS: {e}")
+    if a.no_menu:
+        open(os.path.join(out, 'title', 'content', 'no_menu'), 'wb').close()
 
-    if b3.MEASURE:  # the checks' own kind of build, for Cemu (build3ds.py): never packed, so none can reach a console
+    if b3.MEASURE and not getattr(b3, 'MEASURE_CONSOLE', False):  # the checks' own kind of build, for Cemu (build3ds.py): never packed, so none can reach a console
         print('a measuring build: not packed', flush=True)
         PROGRESS.done, PROGRESS.share = 100, 0
         PROGRESS.at(1)
@@ -428,9 +515,11 @@ def main():
             fail(f'La tarjeta SD necesita {size >> 20} MB libres para este juego.')
         where = copy_to(wup, install)
         shutil.rmtree(wup, ignore_errors=True)
-    if not a.keep:  # the runtime's objects stay: every game shares them
-        shutil.rmtree(game_dir, ignore_errors=True)
+    if not a.keep:  # the runtime's objects stay: every game shares them; delete all temporary game build files
+        shutil.rmtree(out, ignore_errors=True)
         shutil.rmtree(os.path.join(b3.WORK, f'ppc_{info["slug"]}'), ignore_errors=True)
+        if a.out or a.card:
+            shutil.rmtree(game_dir, ignore_errors=True)
     PROGRESS.done, PROGRESS.share = 100, 0
     PROGRESS.at(1)
     print(f'@done {where}', flush=True)

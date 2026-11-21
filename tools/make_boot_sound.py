@@ -14,7 +14,7 @@ import wave
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT = os.path.join(ROOT, 'games', 'boot_sound.btsnd')
 RATE = 48000
-LONGEST = 20  # seconds read of a WAV file: a game has started long before, and this file's own reader isn't fast
+LONGEST = 12  # seconds max (~2.38 MB with 1s trailing silence) so Wii U Menu accepts bootSound.btsnd
 
 
 def decode(path):
@@ -53,6 +53,7 @@ def decode_wav(path):
 
 def btsnd(pcm_le):
     """a boot sound that plays these samples once, then stays silent"""
+    pcm_le = pcm_le[:RATE * LONGEST * 4]
     frames = len(pcm_le) // 4
     samples = struct.unpack('<%dh' % (frames * 2), pcm_le[:frames * 4])
     return struct.pack('>II', 2, frames) + struct.pack('>%dh' % len(samples), *samples) + bytes(RATE * 4)

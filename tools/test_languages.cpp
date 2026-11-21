@@ -30,6 +30,16 @@ int main() {
            "Korea, China and Taiwan have one language each");
     expect(region_languages(AUS) == eur && (eur >> NL & 1) && (eur >> PT & 1) && (eur >> RU & 1) && !(usa >> PT & 1),
            "Australia is Europe's set, with Dutch, Portuguese and Russian; America's has no Portuguese");
+    const uint32_t jue = 1 << JPN | 1 << USA | 1 << EUR;
+    expect(pick_language(regions_languages(jue), -1, EN) == EN && pick_region(jue, EN) == USA,
+           "a game for Japan, the USA and Europe (WarioWare Gold) on an English Wii U is American, in English");
+    expect(pick_region(jue, JP) == JPN && pick_region(jue, DE) == EUR, "its other regions follow their languages");
+    expect(pick_region(jue, -1) == JPN && pick_region(1 << JPN | 1 << USA, KO) == JPN, "with no language of its own regions, its first");
+    expect(pick_region(0, EN) == EUR && pick_region(0x7F, JP) == EUR && pick_region(1 << EUR | 1 << AUS, EN) == EUR &&
+               pick_region(1 << AUS, EN) == EUR,
+           "region-free games and Australia's are told Europe");
+    expect(regions_languages(jue) == (region_languages(JPN) | eur) && regions_languages(0) == eur && regions_languages(1 << USA) == usa,
+           "a game offers its regions' languages together");
     if (failures) return 1;
     printf("game languages ok\n");
     return 0;

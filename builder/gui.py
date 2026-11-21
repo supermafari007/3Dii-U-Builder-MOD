@@ -30,19 +30,21 @@ import updater
 import user_files
 
 APP, VERSION = credits.APP, credits.VERSION
-HERE = os.path.dirname(os.path.abspath(__file__))
+SETTINGS_DIR = '3Dii U Builder'
+_HERE_RAW = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(_HERE_RAW) if _HERE_RAW.lower().endswith('.zip') else _HERE_RAW
 FROZEN = getattr(sys, 'frozen', False)
 WIN = sys.platform == 'win32'
 NO_WINDOW = 0x08000000 if WIN else 0  # the build's compilers would each open a console window otherwise
 DUMPS = 'Juegos de 3DS (*.3ds *.cci *.cia *.cxi *.app);;Todos los archivos (*.*)'
 DUMP_EXTS = ('.3ds', '.cci', '.cia', '.cxi', '.app')
 STAGE_OF = {n: i for i, (n, _) in enumerate(pipeline.STAGES)}
-NO_ART = "Icono propio del juego"
-NO_ICON_ART = 'Igual que la imagen'  # the Wii U Menu icon without a picture of its own
-NO_BEZEL = 'Negro'  # the GamePad beside the screens without a picture
-NO_PAD_ART = 'Igual que el televisor'  # the GamePad's start-up screen without a picture of its own
-NO_SAVE = 'Ninguna: el juego creará su propia partida'  # no 3DS save packed in
-NO_GAME_SOUND = 'El sonido común a todos los juegos'  # a game without a start-up sound of its own: the one for every game, if there is one
+NO_ART = "Icono del juego"
+NO_ICON_ART = 'Igual que la portada'  # the Wii U Menu icon without a picture of its own
+NO_BEZEL = 'Fondo negro'  # the GamePad beside the screens without a picture
+NO_PAD_ART = 'Igual que en TV'  # the GamePad's start-up screen without a picture of its own
+NO_SAVE = 'Ninguna (crear partida nueva)'  # no 3DS save packed in
+NO_GAME_SOUND = 'Sonido general'  # a game without a start-up sound of its own: the one for every game, if there is one
 BOOT_SOUND = os.path.join(os.path.dirname(pipeline.ARCHIVES), 'boot_sound.btsnd')  # where every build picks it up (tools/make_game_title.py)
 GAME_SOUNDS = os.path.join(os.path.dirname(BOOT_SOUND), 'boot_sounds')  # a game's own, <title id>.btsnd
 LIBRARY_MAX = 40  # games the Games page remembers
@@ -50,28 +52,28 @@ LIBRARY_MAX = 40  # games the Games page remembers
 # Testers asked what the system files were and how to get seeddb.bin (Nov 9 and 10).
 HELP = {
     'keys': ('Claves de 3DS',
-             'Dos archivos de tu propia 3DS que permiten abrir volcados de juegos cifrados: boot9.bin y seeddb.bin. Los volcados descifrados no los necesitan.\n\n'
+             'Dos archivos de tu consola 3DS necesarios para abrir volcados cifrados: boot9.bin y seeddb.bin. Los volcados ya descifrados no los requieren.\n\n'
              'Ambos se obtienen con GodMode9 en una 3DS con custom firmware (boot9strap):\n'
-             '•  boot9.bin: abre [M:] MEMORY VIRTUAL, selecciona boot9.bin y pulsa Y. Abre [0:] SDCARD, vuelve a pulsar Y y elige Copy.\n'
-             '•  seeddb.bin: pulsa HOME, selecciona More... y después Build support files. Se guarda en gm9/out, en la tarjeta SD. Contiene las semillas de los juegos instalados en esa 3DS, necesarias para juegos más recientes de eShop.\n\n'
-             'En el PC, coloca ambos archivos en una misma carpeta (por defecto, .3ds dentro de tu carpeta de usuario) o pulsa «Folder» y selecciona dónde están.'),
+             '•  boot9.bin: entra en [M:] MEMORY VIRTUAL, selecciona boot9.bin y presiona Y. Luego abre [0:] SDCARD, presiona Y de nuevo y elige Copy.\n'
+             '•  seeddb.bin: presiona HOME, selecciona More... y después Build support files. Se guardará en gm9/out dentro de la tarjeta SD.\n\n'
+             'En tu PC, coloca ambos archivos en una misma carpeta (por defecto, .3ds dentro de tu carpeta de usuario) o presiona «Carpeta» para seleccionarla.'),
     'otp': ('otp.bin de Wii U',
-            'Un archivo pequeño (exactamente 1024 bytes) de tu propia Wii U. El juego se empaqueta con una clave obtenida de él para que tu consola pueda instalarlo. Builder nunca muestra ni almacena esa clave.\n\n'
-            'Se obtiene de una Wii U con Aroma: ejecuta Wii U NAND Dumper, selecciona Dump OTP y otp.bin se guardará en la tarjeta SD. Si ya creaste una copia de seguridad de la NAND al configurar Aroma, otp.bin estará dentro de esa copia.\n\n'
-            'En el PC, pulsa «File» y selecciónalo. Mantenlo privado: es único para tu consola.'),
+            'Un archivo de exactamente 1024 bytes extraído de tu consola Wii U. El juego se empaqueta con la clave común de este archivo para que tu consola pueda instalarlo. El programa nunca muestra ni almacena esa clave.\n\n'
+            'En una Wii U con Aroma, ejecuta Wii U NAND Dumper, elige Dump OTP y se guardará otp.bin en la tarjeta SD. Si ya hiciste una copia de seguridad de la NAND, otp.bin estará incluido en ella.\n\n'
+            'En tu PC, presiona «Archivo» y selecciónalo.'),
     'system': ('Archivos del sistema de 3DS',
-               'Algunos archivos pequeños que cada 3DS conserva en su propia memoria: la fuente del sistema que muchos juegos utilizan para mostrar texto, los componentes (rostros, ojos y cabello) con los que se dibujan los Miis y la lista de palabras prohibidas que los juegos consultan al escribir nombres. Los juegos los cargan desde la consola, por lo que no están en los volcados. Builder los incorpora a cada juego y no lo compila si faltan archivos que ese juego necesita: los juegos con Miis se detienen sin los componentes Mii y Tomodachi Life lo hace sin la lista de palabras.\n\n'
-               'Se obtienen desde tu propia 3DS de cualquiera de estas maneras:\n'
-               '•  Azahar: File > Set Up System Files, con Artic Setup Tool en ejecución en tu 3DS. Builder los encontrará automáticamente.\n'
-               '•  GodMode9 en tu 3DS: [1:] SYSNAND CTRNAND > title contiene dos carpetas: 0004009b (la fuente y los componentes Mii) y 000400db (la lista de palabras). Selecciona 0004009b y pulsa Y; abre [0:] SDCARD, vuelve a pulsar Y y elige Copy (no Move). Después copia 000400db de la misma manera, junto a la anterior. De vuelta en el PC, pulsa «Folder» aquí y selecciona esa carpeta 0004009b de la tarjeta SD. Al copiarlos de esta manera quedan cifrados, por lo que Builder necesita las claves de tu 3DS para leerlos.\n\n'
-               'Builder los copia una sola vez y los conserva para todos los juegos siguientes.'),
+               'Archivos internos de la consola 3DS requeridos por los juegos: la fuente compartida del sistema, los recursos gráficos para dibujar Miis y la lista de palabras del sistema. No vienen dentro de los volcados de juegos, por lo que el programa los integra automáticamente en cada compilación.\n\n'
+               'Puedes obtenerlos de tu 3DS de cualquiera de estas dos formas:\n'
+               '•  Con el emulador Azahar: usa File > Set Up System Files conectando Artic Setup Tool desde tu 3DS. El programa los detectará automáticamente.\n'
+               '•  Con GodMode9 en tu 3DS: entra en [1:] SYSNAND CTRNAND > title y copia las carpetas 0004009b (fuente y datos de Mii) y 000400db (lista de palabras) a tu tarjeta SD usando Y > Copy. Luego, en tu PC, presiona «Carpeta» aquí y selecciona la carpeta 0004009b.\n\n'
+               'Solo necesitas configurarlos una vez; se conservarán para todas las compilaciones futuras.'),
 }
 
 
 # ---- settings, the PC's drives, and words for what was chosen
 def settings_file():
     base = os.environ.get('APPDATA') if WIN else os.path.join(os.path.expanduser('~'), '.config')
-    return os.path.join(base or HERE, APP, 'settings.json')
+    return os.path.join(base or HERE, SETTINGS_DIR, 'settings.json')
 
 
 def covers_folder():
@@ -156,6 +158,12 @@ def sd_cards():
             root = f'{chr(65 + i)}:\\'
             if mask >> i & 1 and ctypes.windll.kernel32.GetDriveTypeW(root) == 2:  # DRIVE_REMOVABLE
                 found.append(root)
+    elif sys.platform == 'darwin':
+        if os.path.isdir('/Volumes'):
+            for d in sorted(os.listdir('/Volumes')):
+                p = os.path.join('/Volumes', d)
+                if os.path.isdir(p) and not os.path.islink(p) and d not in ('Macintosh HD', 'Recovery', 'Preboot', 'VM', 'Update'):
+                    found.append(p)
     else:
         user = os.environ.get('USER', '')
         for base in (f'/media/{user}', f'/run/media/{user}'):
@@ -168,7 +176,7 @@ def describe(d):
     if d is None:
         return ''
     v = f'v{d.version >> 10}.{d.version >> 4 & 63}.{d.version & 15}'
-    return f'{v}, {d.size >> 20} MB' if d.kind == 'update' else f'{len([c for c in d.cia.contents if c[4] is not None])} contents, {d.size >> 20} MB' \
+    return f'{v}, {d.size >> 20} MB' if d.kind == 'update' else f'{len([c for c in d.cia.contents if c[4] is not None])} contenidos, {d.size >> 20} MB' \
         if d.cia else f'{d.size >> 20} MB'
 
 
@@ -236,6 +244,7 @@ def theme():
 class App(QObject):
     changed = Signal()
     coverReady = Signal(str, str, str)  # title id, the picture's path, the icon's: from fetch_cover's thread
+    releaseReady = Signal(str, str)  # title id and GameTDB release line: from fetch_cover's thread
     layoutWanted = Signal(str)  # setLayout: run() swaps the window
     keyRefused = Signal()  # SteamGridDB turned the key down: from fetch_cover's thread
     updateEvent = Signal(str, object)  # what, value: from the updater's worker threads, the value passed as it is
@@ -246,15 +255,19 @@ class App(QObject):
 
     hasGame, gameName, maker, badge, known = _p(bool, 'hasGame'), _p(str, 'gameName'), _p(str, 'maker'), _p(str, 'badge'), _p(bool, 'known')
     note, meta, icon = _p(str, 'note'), _p(str, 'meta'), _p(str, 'icon')
+    releaseText = _p(str, 'releaseText')
     updateText, hasUpdate, dlcText, hasDlc = _p(str, 'updateText'), _p(bool, 'hasUpdate'), _p(str, 'dlcText'), _p(bool, 'hasDlc')
     modText, hasMod = _p(str, 'modText'), _p(bool, 'hasMod')
     artText, hasArt, artUrl = _p(str, 'artText'), _p(bool, 'hasArt'), _p(str, 'artUrl')
     iconText, hasIconArt, iconArtUrl, tileUrl = _p(str, 'iconText'), _p(bool, 'hasIconArt'), _p(str, 'iconArtUrl'), _p(str, 'tileUrl')
     bezelText, hasBezel = _p(str, 'bezelText'), _p(bool, 'hasBezel')
-    padArtText, hasPadArt, gameSoundText, hasGameSound = _p(str, 'padArtText'), _p(bool, 'hasPadArt'), _p(str, 'gameSoundText'), _p(bool, 'hasGameSound')
+    padArtText, hasPadArt, padArtUrl, gameSoundText, hasGameSound = _p(str, 'padArtText'), _p(bool, 'hasPadArt'), _p(str, 'padArtUrl'), _p(str, 'gameSoundText'), _p(bool, 'hasGameSound')
     saveText, hasSave = _p(str, 'saveText'), _p(bool, 'hasSave')
-    artKeySet, soundSet, artStyle = _p(bool, 'artKeySet'), _p(bool, 'soundSet'), _p(str, 'artStyle')
+    isMk7, mk7Online = _p(bool, 'isMk7'), _p(bool, 'mk7Online')
+    artKeySet, soundSet, soundCustom, artStyle = _p(bool, 'artKeySet'), _p(bool, 'soundSet'), _p(bool, 'soundCustom'), _p(str, 'artStyle')
     library = _p('QVariantList', 'library')
+    templateUrl = _p(str, 'templateUrl')
+    logoUrl = _p(str, 'logoUrl')
     keysOk, keysNeeded, keysText, otpOk, otpText = _p(bool, 'keysOk'), _p(bool, 'keysNeeded'), _p(str, 'keysText'), _p(bool, 'otpOk'), _p(str, 'otpText')
     sysOk, sysText = _p(bool, 'sysOk'), _p(str, 'sysText')
     target, destText, cards = _p(str, 'target'), _p(str, 'destText'), _p('QVariantList', 'cards')
@@ -290,8 +303,8 @@ class App(QObject):
         faq = [e for e in faq if isinstance(e, dict) and isinstance(e.get('q'), str) and isinstance(e.get('a'), str) and e['q'] and e['a']]             if isinstance(faq, list) else []
         theme_mode = self.st.get('theme')
         self._s = dict(hasGame=False, gameName='', maker='', badge='', known=False, icon='', meta='',
-                       note='Selecciona uno de tus juegos de 3DS para comenzar. Builder leerá su nombre e icono y preguntará por su actualización y DLC.',
-                       updateText='None', hasUpdate=False, dlcText='None', hasDlc=False, modText='None', hasMod=False, artText=NO_ART, hasArt=False, artUrl='', iconText=NO_ART, hasIconArt=False, iconArtUrl='', tileUrl='', bezelText=NO_BEZEL, hasBezel=False, padArtText=NO_PAD_ART, hasPadArt=False, gameSoundText=NO_GAME_SOUND, hasGameSound=False, saveText=NO_SAVE, hasSave=False, artKeySet=bool(self.st.get('sgdb_key')), soundSet=os.path.isfile(BOOT_SOUND), artStyle=self.st.get('art_style', 'console'), library=[], keysOk=False, keysNeeded=False, keysText='', otpOk=False,
+                       note='Selecciona un juego de 3DS para comenzar. El programa leerá su título e icono y te permitirá agregar actualizaciones, DLC o mods.', releaseText='',
+                       updateText='Ninguno', hasUpdate=False, dlcText='Ninguno', hasDlc=False, modText='Ninguno', hasMod=False, artText=NO_ART, hasArt=False, artUrl='', iconText=NO_ART, hasIconArt=False, iconArtUrl='', tileUrl='', bezelText=NO_BEZEL, hasBezel=False, padArtText=NO_PAD_ART, hasPadArt=False, padArtUrl='', templateUrl=QUrl.fromLocalFile(os.path.join(pipeline.ROOT, 'phase0', 'title_code', 'meta', 'nintendo_3ds_template.png')).toString(), gameSoundText=NO_GAME_SOUND, hasGameSound=False, saveText=NO_SAVE, hasSave=False, isMk7=False, mk7Online=bool(self.st.get('mk7_pretendo_online', False)), artKeySet=bool(self.st.get('sgdb_key')), soundSet=os.path.isfile(BOOT_SOUND) or os.path.isfile(os.path.join(pipeline.ROOT, 'phase0', 'title_code', 'meta', 'bootSound.btsnd')), soundCustom=os.path.isfile(BOOT_SOUND), artStyle=self.st.get('art_style', 'console'), library=[], keysOk=False, keysNeeded=False, keysText='', otpOk=False,
                        otpText='', sysOk=False, sysText='', target=self.st.get('target', 'card'), destText='', cards=[], building=False, view='form', stages=[],
                        stage=-1, failed=False, progress=0.0, detail='', log='', resultText='', where='', dialog=None, version=VERSION,
                        rootOk=bool(pipeline.ROOT) and os.path.isfile(os.path.join(pipeline.ROOT, 'tools', 'win', 'build3ds.py')),
@@ -300,6 +313,8 @@ class App(QObject):
                        faq=faq, themeMode=theme_mode if theme_mode in ('system', 'light', 'dark') else 'system', dark=False,
                        updateState='', updateTitle='', updateNotes='', updateProgress=0, updateMessage='', releaseTag=updater.own_tag(),
                        updateSetAside=False)
+        self._s['templateUrl'] = QUrl.fromLocalFile(os.path.join(pipeline.ROOT, 'phase0', 'title_code', 'meta', 'nintendo_3ds_template_clean.png')).toString()
+        self._s['logoUrl'] = QUrl.fromLocalFile(os.path.join(pipeline.ROOT, 'phase0', 'title_code', 'meta', 'nintendo_3ds_logo.png')).toString()
         self.release, self.update_job, self.check_job, self.update_stop, self.shown, self.ask_again = None, None, None, threading.Event(), False, False
         self.set(updateSetAside=self.set_aside(updater.failed_tags()))
         ready = updater.activated()  # a version downloaded before (Later, or a start with Shift held) is ready without a check
@@ -311,6 +326,7 @@ class App(QObject):
         QGuiApplication.styleHints().colorSchemeChanged.connect(self.apply_theme)  # "system" follows Windows switching while the window is open
         self.apply_theme()
         self.coverReady.connect(self.cover_ready)
+        self.releaseReady.connect(self.release_ready)
         self.keyRefused.connect(self.key_refused)
         self.refresh_library()
         self.timer = QTimer(self)
@@ -355,7 +371,7 @@ class App(QObject):
 
     @Slot()
     def about(self):
-        self.tell(f'About {APP}', credits.about())
+        self.tell(f'Acerca de {APP}', credits.about(self._s['releaseTag']))
 
     @Slot(str)
     def setLayout(self, name):
@@ -374,6 +390,12 @@ class App(QObject):
         self.st['art_style'] = style
         save_settings(self.st)
         self.set(artStyle=style)
+
+    @Slot(bool)
+    def setMk7Online(self, enabled):
+        self.st['mk7_pretendo_online'] = bool(enabled)
+        save_settings(self.st)
+        self.set(mk7Online=bool(enabled))
 
     @Slot(str)
     def setThemeMode(self, mode):
@@ -435,7 +457,12 @@ class App(QObject):
         self.game, self.update, self.dlc, self.mod = d, None, None, None
         info = pipeline.profile_for(d) or pipeline.derived(d)
         known = info['status'] in ('Plays', 'Complete')  # compat.json: tested on a real Wii U, or finished there
-        self.set(hasGame=True, gameName=info['name'], maker=d.publisher or '', known=known, badge=('Completo en Wii U' if info['status'] == 'Complete' else 'Jugable en Wii U') if known else 'Sin probar',
+        overrides = self.st.get('metadata', {}).get(f'{d.title_id:016x}', {})
+        shown_name = overrides.get('name', info['name'])
+        shown_publisher = overrides.get('publisher', d.publisher or '')
+        info['name'] = shown_name
+        info['publisher'] = shown_publisher
+        self.set(hasGame=True, isMk7=(d.title_id in pipeline.MK7_TITLE_IDS), gameName=shown_name, maker=shown_publisher, releaseText='', known=known, badge=('Completo en Wii U' if info['status'] == 'Complete' else 'Jugable en Wii U') if known else 'Sin probar',
                  icon=icon_url(d.icon) if d.icon else '', meta=f'{d.product}  ·  {d.title_id:016X}  ·  {describe(d)}', view='form')
         self.set_extra('update', None)
         self.set_extra('dlc', None)
@@ -451,6 +478,7 @@ class App(QObject):
         self.set_game_sound(sound if sound and os.path.isfile(sound) else None, remember=False)
         save = self.st.get('save_in', {}).get(f'{d.title_id:016x}')
         self.set_save(save if save and os.path.isdir(save) else None, remember=False)
+        threading.Thread(target=self.fetch_release, args=(d,), daemon=True).start()
         if saved is None:  # nothing chosen yet: its cover art, fetched off the window's thread
             threading.Thread(target=self.fetch_cover, args=(d, info['name']), daemon=True).start()
         self.refresh_files()
@@ -475,7 +503,8 @@ class App(QObject):
             art = (self.st.get('icon_art', {}).get(g['id']) or self.st.get('art', {}).get(g['id'])  # a square icon fills a tile best
                    or os.path.join(covers_dir, (covers.game_code(g['product']) or '-') + '.jpg'))
             cover = QUrl.fromLocalFile(art).toString() if os.path.isfile(art) else ''
-            shown.append(dict(path=g['path'], name=g['name'], icon=g['icon'], cover=cover, current=bool(self.game and self.game.path == g['path'])))
+            name = self.st.get('metadata', {}).get(g['id'], {}).get('name', g['name'])
+            shown.append(dict(path=g['path'], name=name, icon=g['icon'], cover=cover, current=bool(self.game and self.game.path == g['path'])))
         self.set(library=shown)
 
     @Slot(str)
@@ -543,7 +572,7 @@ class App(QObject):
 
     @Slot(str)
     def chooseExtra(self, kind):
-        what = 'update' if kind == 'update' else 'DLC'
+        what = 'la actualización' if kind == 'update' else 'el DLC'
         path = QFileDialog.getOpenFileName(None, f'Selecciona {what} para {self._s["gameName"]}', os.path.dirname(self.game.path), DUMPS)[0]
         if not path:
             return
@@ -551,7 +580,7 @@ class App(QObject):
         if d is None:
             return
         if d.kind != kind or d.unique != self.game.unique:
-            self.tell(f'Eso no es {what}', f'No corresponde a {what} de {self._s["gameName"]}.', 'error')
+            self.tell(f'Archivo no válido', f'Ese archivo no corresponde a {what} de {self._s["gameName"]}.', 'error')
             return
         self.set_extra(kind, d)
 
@@ -645,7 +674,30 @@ class App(QObject):
         self.pad_art = path
         if self.game and remember:
             self.keep_for_game('pad_art', path)
-        self.set(padArtText=os.path.basename(path) if path else NO_PAD_ART, hasPadArt=bool(path))
+        self.set(padArtText=os.path.basename(path) if path else NO_PAD_ART, hasPadArt=bool(path),
+                 padArtUrl=QUrl.fromLocalFile(path).toString() if path else '')
+
+    @Slot()
+    def editMetadata(self):
+        """Edit the title and publisher shown by the Wii U and the 3DS information screen."""
+        if not self.game or self._s['building']:
+            return
+        title, ok = QInputDialog.getText(None, 'Información del juego', 'Nombre del juego:', text=self._s['gameName'])
+        if not ok:
+            return
+        publisher, ok = QInputDialog.getText(None, 'Información del juego', 'Desarrollador o distribuidor:', text=self._s['maker'])
+        if not ok:
+            return
+        title = ' '.join(title.split())
+        publisher = ' '.join(publisher.split())
+        if not title:
+            self.tell('Falta el nombre del juego', 'Escribe un nombre para mostrarlo en el menú y la pantalla de inicio.', 'warn')
+            return
+        key = f'{self.game.title_id:016x}'
+        self.st.setdefault('metadata', {})[key] = {'name': title, 'publisher': publisher}
+        save_settings(self.st)
+        self.set(gameName=title, maker=publisher)
+        self.refresh_library()
 
     @Slot()
     def chooseGameSound(self):
@@ -712,6 +764,19 @@ class App(QObject):
         banner, icon = found.get('banner') or cover, found.get('icon') or (cover if found.get('banner') else None)
         if banner or icon:
             self.coverReady.emit(title_id, banner or '', icon or '')
+
+    def fetch_release(self, game):
+        """Fetch release metadata even when the user already supplied custom artwork."""
+        try:
+            released = covers.released(game.product, covers_folder())
+        except (OSError, ValueError):
+            released = ''
+        self.releaseReady.emit(f'{game.title_id:016x}', released)
+
+    @Slot(str, str)
+    def release_ready(self, title_id, released):
+        if self.game and f'{self.game.title_id:016x}' == title_id:
+            self.set(releaseText=released)
 
     def cover_ready(self, title_id, path, icon):
         # fetched art where the game has none; an icon the player picked stays
@@ -780,7 +845,7 @@ class App(QObject):
     @Slot()
     def chooseSound(self):
         if self.ask_sound('Sonido para reproducir al iniciar tus juegos', BOOT_SOUND):
-            self.set(soundSet=True)
+            self.set(soundSet=True, soundCustom=True)
 
     @Slot()
     def removeSound(self):
@@ -789,7 +854,8 @@ class App(QObject):
                 os.remove(BOOT_SOUND)
         except OSError as e:
             self.tell("No se pudo quitar el sonido", str(e), 'error')
-        self.set(soundSet=os.path.isfile(BOOT_SOUND))
+        self.set(soundSet=os.path.isfile(BOOT_SOUND) or os.path.isfile(os.path.join(pipeline.ROOT, 'phase0', 'title_code', 'meta', 'bootSound.btsnd')),
+                 soundCustom=os.path.isfile(BOOT_SOUND))
 
     @Slot(str)
     def removeExtra(self, kind):
@@ -907,23 +973,23 @@ class App(QObject):
         cards = sd_cards()
         if self.st.get('card') not in cards:
             self.st['card'] = cards[0] if cards else ''
-        self.set(cards=[dict(path=c, label=f'{c}    {"set up for a Wii U" if os.path.isdir(os.path.join(c, "wiiu")) else "removable drive"}') for c in cards])
+        self.set(cards=[dict(path=c, label=f'{c}    {"preparada para Wii U" if os.path.isdir(os.path.join(c, "wiiu")) else "unidad extraíble"}') for c in cards])
 
     def refresh_files(self):
         keys, otp = self.st['keys'], self.st.get('otp', '')
         needed = bool(self.game and self.game.encrypted())
         card, folder = self.st.get('card', ''), self.st.get('folder', '')
         if self._s['target'] == 'card':
-            dest = f'{card}   {"Wii U card" if os.path.isdir(os.path.join(card, "wiiu")) else "SD card"}' if card else 'No se encontró ninguna tarjeta SD'
+            dest = f'{card}   {"Tarjeta de Wii U" if os.path.isdir(os.path.join(card, "wiiu")) else "Tarjeta SD"}' if card else 'No se detectó ninguna tarjeta SD'
         else:
             dest = short(folder, 40) if folder else 'Selecciona una carpeta...'
         have = decrypt.have_keys(keys)
         system = dumps.have_system_archives(pipeline.ARCHIVES)
         source = short(self.st['system'], 26) if self.st.get('system') else ''
-        self.set(sysOk=system, sysText=(source or 'Encontrados') if system else 'Todavía no encontrados')  # short: the row has its pills beside it
+        self.set(sysOk=system, sysText=(source or 'Configurados') if system else 'No configurados')  # short: the row has its pills beside it
         self.set(keysOk=have, keysNeeded=needed and not have,
-                 keysText=short(keys, 26) if have else 'Todavía no encontrados' if needed else 'Solo para volcados cifrados',
-                 otpOk=otp_ok(otp), otpText=short(otp, 26) if otp_ok(otp) else 'Todavía no encontrados', destText=dest)
+                 keysText=short(keys, 26) if have else 'No configuradas' if needed else 'Solo para volcados cifrados',
+                 otpOk=otp_ok(otp), otpText=short(otp, 26) if otp_ok(otp) else 'No seleccionado', destText=dest)
 
     # ---- updates (updater.py): every call that reaches the network or the disk runs on a worker, which reports through updateEvent
     @Slot()
@@ -1090,8 +1156,12 @@ class App(QObject):
                 argv += [f'--{kind}', getattr(self, kind).path]
         if self.mod:
             argv += ['--mod', self.mod]
+        argv += ['--art-style', self._s['artStyle']]
         if self.art:
-            argv += ['--art', self.art, '--art-style', self._s['artStyle'], '--tdb', covers_folder()]
+            argv += ['--art', self.art]
+        if self._s['artStyle'] == 'console':
+            argv += ['--tdb', covers_folder()]
+        argv += ['--name', self._s['gameName'], '--publisher', self._s['maker']]
         if self.icon_art:
             argv += ['--icon-art', self.icon_art]
         if self.bezel:
@@ -1102,6 +1172,8 @@ class App(QObject):
             argv += ['--boot-sound', self.game_sound]
         if self.save_in:
             argv += ['--save', self.save_in]
+        if self._s['isMk7'] and self._s['mk7Online']:
+            argv += ['--mk7-online']
         self.log_lines, self.result, self.cancelled = [], None, False
         stages = [n for n, _ in pipeline.STAGES if n != 'Copiando' or self._s['target'] == 'card']
         self.set(building=True, view='building', stages=stages, stage=0, failed=False, progress=0.0, detail='Iniciando...', log='')
@@ -1147,22 +1219,22 @@ class App(QObject):
         self.timer.stop()
         if self.result and self.result.startswith('@done '):
             where = self.result[6:]
-            msg = (f'{self._s["gameName"]} is on your SD card, in install\\{os.path.basename(where)}. Put the card in your Wii U and install it with WUP '
+            msg = (f'{self._s["gameName"]} se guardó en tu tarjeta SD, en install\\{os.path.basename(where)}. Inserta la tarjeta en tu Wii U e instálalo con WUP '
                    f'Installer GX2.' if self._s['target'] == 'card' else
-                   f'The WUP is in {where}. Copy it to your SD card\'s install folder and install it with WUP Installer GX2.')
-            self.set(building=False, view='done', stage=len(self._s['stages']), where=where, resultText=msg + ' If an older build of it is installed, '
-                                                                                                            'delete that first.')
+                   f'El paquete WUP se guardó en {where}. Cópialo a la carpeta install de tu tarjeta SD e instálalo con WUP Installer GX2.')
+            self.set(building=False, view='done', stage=len(self._s['stages']), where=where,
+                     resultText=msg + ' Si ya tenías instalada una versión anterior de este juego, elimínala primero desde la consola.')
         elif self.cancelled:
             self.set(building=False, view='form')
         else:
             self.set(building=False, view='failed', failed=True,
-                     resultText=self.result[7:] if self.result else 'The build stopped. Details says where.')
+                     resultText=self.result[7:] if self.result else 'La compilación se detuvo. Pulsa «Detalles» para ver el registro.')
 
     @Slot()
     def cancel(self):
         if self.proc and self.proc.poll() is None:
             self.cancelled = True
-            self.set(detail='Stopping...')
+            self.set(detail='Deteniendo...')
             if WIN:  # the build's own compilers go too
                 subprocess.run(['taskkill', '/T', '/F', '/PID', str(self.proc.pid)], creationflags=NO_WINDOW, capture_output=True)
             else:
@@ -1177,7 +1249,7 @@ class App(QObject):
     def openFolder(self):
         where = self._s['where']
         if os.path.isdir(where):
-            os.startfile(where) if WIN else subprocess.Popen(['xdg-open', where])
+            os.startfile(where) if WIN else subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', where])
 
     @Slot(result=bool)
     def busy(self):
@@ -1203,7 +1275,7 @@ def place(win):
     else:
         w = int(min(1280, area.width() * 0.9, area.height() * 0.9 * 16 / 9))
         h = w * 9 // 16
-        win.setMinimumSize(QSize(min(960, area.width()), min(540, area.height())))
+        win.setMinimumSize(QSize(min(880, area.width()), min(495, area.height())))
     win.setGeometry(area.x() + (area.width() - w) // 2, area.y() + (area.height() - h) // 2, w, h)
 
 

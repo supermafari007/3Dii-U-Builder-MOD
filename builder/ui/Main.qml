@@ -10,24 +10,27 @@ ApplicationWindow {
     id: win
     width: 1280
     height: 720
-    minimumWidth: 960
-    minimumHeight: 540
+    minimumWidth: 880
+    minimumHeight: 495
     visible: false  // gui.run() sizes it to its screen and shows it, so a check can load it unseen
-    title: "3Dii U Builder"
+    title: "3Dii-U Builder MOD " + app.version
     font.family: T.font
-    font.letterSpacing: 0.8  // the design's lettering is wider than Segoe UI's
+    font.letterSpacing: 0.4
 
     readonly property var pal: app.dark ? T.dark : T.light
     readonly property real s: Math.min(width / 1280, height / 720)
     // device pixels per design pixel, what layers render at to stay sharp: at most 2 (memory on old integrated GPUs), in half steps so a
     // resize reallocates them a few times, not at every pixel
     readonly property real px: Math.min(2, Math.ceil(s * Screen.devicePixelRatio * 2) / 2)
-    readonly property bool blocked: dialogLayer.visible || cardMenu.visible || artMenu.visible  // the shortcuts wait while a dialog or a menu is open
+    readonly property bool blocked: dialogLayer.visible || cardMenu.visible || artMenu.visible || previewDialog.visible  // the shortcuts wait while a dialog, menu, or preview is open
     property string page: "build"
     readonly property bool restarting: app.updateState === "restarting"
     readonly property bool busy: app.building || restarting  // the game controls wait while a build runs or the new version starts
     property bool showLog: false
     property int openFaq: -1
+    property string previewKind: "tv"
+    function showPreview(kind) { previewKind = kind; previewDialog.visible = true; closePreviewPill.focusIn() }
+    function hidePreview() { previewDialog.visible = false }
     property Item lastFocus: null
     onActiveFocusItemChanged: if (activeFocusItem && !blocked) lastFocus = activeFocusItem
     onBlockedChanged: if (!blocked) Qt.callLater(() => { if (lastFocus && lastFocus.visible && lastFocus.enabled) lastFocus.forceActiveFocus() })
@@ -177,8 +180,8 @@ ApplicationWindow {
         id: p
         property string text
         property string tone: "grey"
-        property real fontSize: 21
-        property real letterSpacing: 0.8
+        property int fontSize: 17
+        property real letterSpacing: 0.3
         property string accessibleName: text
         property string tip
         readonly property bool hasFocus: ma.activeFocus
@@ -188,8 +191,8 @@ ApplicationWindow {
         property color ink: tone === "cyan" ? pal.cyanText : tone === "red" ? pal.redText : pal.greyText
         readonly property color fill: ma.pressed ? Qt.darker(base, 1.06) : ma.containsMouse ? Qt.lighter(base, 1.05) : base
         signal clicked
-        implicitWidth: Math.max(102, ink_.implicitWidth + 30)
-        implicitHeight: 42
+        implicitWidth: Math.max(84, ink_.implicitWidth + 24)
+        implicitHeight: 36
         opacity: enabled || win.blocked ? 1 : 0.45  // under a dialog or a menu the page is out of reach but keeps its look
         Item {
             anchors.fill: parent
@@ -217,13 +220,19 @@ ApplicationWindow {
         property bool danger: false
         signal picked
         function focusIn() { entryHit.forceActiveFocus() }
-        width: 356; height: 42; radius: 21
+        width: 452; height: 42; radius: 21
         color: entryHover.hovered ? pal.gloss : "transparent"
         HoverHandler { id: entryHover }
-        Label { x: 16; anchors.verticalCenter: parent.verticalCenter; text: e.label; color: e.danger ? pal.redText : pal.label; font.pixelSize: 17 }
         Label {
-            anchors.right: parent.right; anchors.rightMargin: 16; anchors.verticalCenter: parent.verticalCenter
-            width: 130; horizontalAlignment: Text.AlignRight; elide: Text.ElideMiddle
+            x: 18; anchors.verticalCenter: parent.verticalCenter
+            width: e.chosen.length > 0 ? parent.width - chosenLabel.width - 44 : parent.width - 36
+            elide: Text.ElideRight
+            text: e.label; color: e.danger ? pal.redText : pal.label; font.pixelSize: 16
+        }
+        Label {
+            id: chosenLabel
+            anchors.right: parent.right; anchors.rightMargin: 18; anchors.verticalCenter: parent.verticalCenter
+            width: e.chosen.length > 0 ? 168 : 0; horizontalAlignment: Text.AlignRight; elide: Text.ElideMiddle
             text: e.chosen; color: pal.subLabel; font.pixelSize: 14
         }
         Hit { id: entryHit; ringRadius: 21; name: e.label; description: e.chosen; role: Accessible.MenuItem; onActivated: e.picked() }
@@ -271,23 +280,23 @@ ApplicationWindow {
         property color titleColor: pal.title
         default property alias content: rows.data
         width: 560
-        height: rows.y + rows.implicitHeight + 14
+        height: rows.y + rows.implicitHeight + 18
         GlassFace { anchors.fill: parent }
-        Label { x: 24; y: 3; text: card.title; color: card.titleColor; font.pixelSize: 31; font.letterSpacing: 1.6 }
+        Label { x: 24; y: 10; text: card.title; color: card.titleColor; font.pixelSize: 25; font.weight: Font.DemiBold; font.letterSpacing: 0.6 }
         Label {
             id: sub
-            x: 25; y: 41
+            x: 25; y: 44
             width: card.width - 50
             text: card.subtitle
             textFormat: Text.PlainText  // a release's title comes from GitHub: no markup, so nothing is fetched from elsewhere
             visible: text.length > 0
             color: pal.sub
-            font.pixelSize: 17
-            lineHeightMode: Text.FixedHeight
-            lineHeight: 16.5
+            font.pixelSize: 15
+            lineHeightMode: Text.ProportionalHeight
+            lineHeight: 1.18
             wrapMode: Text.WordWrap
         }
-        Column { id: rows; y: sub.visible ? Math.max(82, sub.y + sub.lineCount * sub.lineHeight + 8) : 52; width: card.width }
+        Column { id: rows; y: sub.visible ? Math.max(76, sub.y + sub.implicitHeight + 10) : 50; width: card.width; spacing: 2 }
     }
 
     // a row in a card: light, label, sub-label, pills on the right
@@ -304,12 +313,27 @@ ApplicationWindow {
         signal tapped
         default property alias pills: pillRow.data
         width: parent ? parent.width : 560
-        height: 50
+        height: Math.max(54, subLab.visible ? subLab.y + subLab.implicitHeight + 8 : 50)
         Hit { enabled: row.tappable; visible: row.tappable; anchors.margins: 6; name: row.label; description: row.description; role: row.role; checked: row.checked; onActivated: row.tapped() }
-        Light { x: 26; y: 14; tone: row.light; pulse: row.pulse }
-        Label { id: lab; x: 64; y: 3; width: pillRow.x - 72; text: row.label; color: pal.label; font.pixelSize: 18; elide: Text.ElideRight }
-        Label { x: 64; y: 22; width: lab.width; text: row.sub; color: pal.subLabel; font.pixelSize: 17; elide: Text.ElideRight }
-        Row { id: pillRow; anchors.right: parent.right; anchors.rightMargin: 21; y: 7; spacing: 8 }
+        Light { x: 24; y: (parent.height - height) / 2; tone: row.light; pulse: row.pulse }
+        Label {
+            id: lab
+            x: 60
+            y: subLab.visible ? 7 : (parent.height - implicitHeight) / 2
+            width: Math.max(110, pillRow.x - 72)
+            text: row.label; color: pal.label; font.pixelSize: 17; font.weight: Font.Medium; elide: Text.ElideRight
+        }
+        Label {
+            id: subLab
+            x: 60; y: 29
+            width: lab.width
+            visible: text.length > 0
+            text: row.sub; color: pal.subLabel; font.pixelSize: 14
+            wrapMode: row.width > 700 ? Text.WordWrap : Text.NoWrap
+            maximumLineCount: row.width > 700 ? 2 : 1
+            elide: Text.ElideRight
+        }
+        Row { id: pillRow; anchors.right: parent.right; anchors.rightMargin: 20; y: (parent.height - height) / 2; spacing: 8 }
     }
 
     // a row whose sub-label wraps: compatibility notes, answers
@@ -319,14 +343,15 @@ ApplicationWindow {
         property string sub
         property string light: "grey"
         width: parent ? parent.width : 560
-        height: Math.max(50, col.implicitHeight + 12)
-        Light { x: 26; y: 14; tone: nr.light }
+        height: Math.max(52, col.implicitHeight + 14)
+        Light { x: 24; y: 14; tone: nr.light }
         Column {
             id: col
-            x: 64; y: 3
-            width: nr.width - 64 - 24
-            Label { width: parent.width; text: nr.label; color: pal.label; font.pixelSize: 18; wrapMode: Text.WordWrap }
-            Label { width: parent.width; text: nr.sub; color: pal.subLabel; font.pixelSize: 17; wrapMode: Text.WordWrap; visible: text.length > 0 }
+            x: 60; y: 6
+            width: nr.width - 60 - 24
+            spacing: 2
+            Label { width: parent.width; text: nr.label; color: pal.label; font.pixelSize: 17; font.weight: Font.Medium; wrapMode: Text.WordWrap }
+            Label { width: parent.width; text: nr.sub; color: pal.subLabel; font.pixelSize: 14; wrapMode: Text.WordWrap; visible: text.length > 0 }
         }
     }
 
@@ -480,37 +505,39 @@ ApplicationWindow {
         Item {
             y: 542; width: 190; height: 178
             Rectangle {
-                x: 42; y: 28; width: 104; height: 104; radius: 52; color: pal.helpRing
+                x: 42; y: 20; width: 104; height: 104; radius: 52; color: pal.helpRing
                 Rectangle {
                     anchors.centerIn: parent; anchors.verticalCenterOffset: -3
                     width: 84; height: 84; radius: 42; color: pal.helpFace
                     Label { anchors.centerIn: parent; text: "?"; color: pal.helpRing; font.pixelSize: 62; font.weight: Font.Bold }
                 }
             }
-            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 140; text: "Ayuda"; color: pal.helpText; font.pixelSize: 30; font.weight: Font.DemiBold }
+            Label { anchors.horizontalCenter: parent.horizontalCenter; y: 130; text: "Ayuda"; color: pal.helpText; font.pixelSize: 28; font.weight: Font.DemiBold }
             Hit { anchors.margins: 10; name: "Página Ayuda"; role: Accessible.PageTab; checked: win.page === "help"; onActivated: win.page = "help" }
         }
 
-        // ---- the title row: 3DiiU Builder, a 3DS, dots, a GamePad
+        // ---- the title row: 3Dii-U Builder MOD, a 3DS, dots, a GamePad
         Row {
-            x: 208; y: -2
-            TwoTone { text: "3D"; color: pal.red }
-            TwoTone { text: "iiU"; color: pal.cyan }
-            Item { width: 20; height: 1 }
-            TwoTone { text: "Builder"; color: pal.builder }
+            x: 212; y: 10
+            TwoTone { text: "3D"; size: 54; color: pal.red }
+            TwoTone { text: "ii-U"; size: 54; color: pal.cyan }
+            Item { width: 14; height: 1 }
+            TwoTone { text: "Builder"; size: 54; color: pal.builder }
+            Item { width: 14; height: 1 }
+            TwoTone { text: "MOD"; size: 40; y: 10; color: pal.cyan }
         }
         Rectangle {
-            x: 690; y: 8; width: 62; height: 84; radius: 5
+            x: 800; y: 8; width: 62; height: 84; radius: 5
             color: pal.ds
             border.color: Qt.darker(pal.ds, 1.08); border.width: 2
             Rectangle { x: 8; y: 7; width: 46; height: 32; radius: 2; color: pal.screen }
             Rectangle { x: 8; y: 46; width: 46; height: 31; radius: 2; color: pal.screen }
         }
         Repeater {
-            model: 11
+            model: 7
             Rectangle {
-                readonly property color hue: index < 5 ? win.mix(pal.dotFrom, pal.dotMid, index / 5) : win.mix(pal.dotMid, pal.dotTo, (index - 5) / 5)
-                x: 761 + index * 30; y: 48; width: 18; height: 18; radius: 9
+                readonly property color hue: index < 3 ? win.mix(pal.dotFrom, pal.dotMid, index / 3) : win.mix(pal.dotMid, pal.dotTo, (index - 3) / 3)
+                x: 874 + index * 30; y: 48; width: 18; height: 18; radius: 9
                 color: hue
                 Rectangle { x: 4; y: 2; width: 10; height: 6; radius: 3; color: Qt.lighter(parent.hue, 1.15) }
             }
@@ -542,35 +569,35 @@ ApplicationWindow {
             readonly property string art: app.tileUrl || app.icon
 
             Rectangle {
-                x: 250; y: 470; width: 368; height: 80; radius: 75
+                x: 282; y: 410; width: 304; height: 48; radius: 56
                 gradient: Gradient {
-                    GradientStop { position: 0; color: Qt.alpha(pal.tileBase, 0.3) }
+                    GradientStop { position: 0; color: Qt.alpha(pal.tileBase, 0.25) }
                     GradientStop { position: 1; color: Qt.alpha(pal.tileBase, 0) }
                 }
             }
             GlassFace {
                 id: tile
-                x: 250; y: 100; width: 368; height: 368
-                radius: 75
+                x: 282; y: 98; width: 304; height: 304
+                radius: 56
                 base: pal.tileBase
                 gloss: pal.tileGloss
                 glossOpacity: 0.3
-                glossEdge: 200
-                bulge: 48
-                rim: 12
+                glossEdge: 185
+                bulge: 42
+                rim: 11
                 feather: 3
                 shadowOffset: 4
-                Hit { enabled: !win.busy; ringRadius: 75; name: app.hasGame ? "Change game: " + app.gameName : "Elegir un juego"; onActivated: app.chooseGame() }
+                Hit { enabled: !win.busy; ringRadius: 68; name: app.hasGame ? "Cambiar juego: " + app.gameName : "Elegir un juego"; onActivated: app.chooseGame() }
                 Item {
                     anchors.fill: parent
                     visible: !app.hasGame || buildPage.art === ""
-                    Rectangle { anchors.centerIn: parent; anchors.horizontalCenterOffset: 0; width: 225; height: 46; radius: 23; color: pal.plus }
-                    Rectangle { anchors.centerIn: parent; width: 46; height: 225; radius: 23; color: pal.plus }
+                    Rectangle { anchors.centerIn: parent; anchors.horizontalCenterOffset: 0; width: 204; height: 42; radius: 21; color: pal.plus }
+                    Rectangle { anchors.centerIn: parent; width: 42; height: 204; radius: 21; color: pal.plus }
                 }
                 Image {
                     id: artImg
                     anchors.fill: parent
-                    anchors.margins: 16
+                    anchors.margins: 13
                     source: app.hasGame ? buildPage.art : ""
                     fillMode: Image.PreserveAspectCrop
                     smooth: true
@@ -579,21 +606,21 @@ ApplicationWindow {
                     layer.enabled: true
                     layer.textureSize: Qt.size(width * win.px, height * win.px)
                 }
-                Rectangle { id: artMask; anchors.fill: artImg; radius: 60; visible: false; layer.enabled: true; layer.textureSize: Qt.size(width * win.px, height * win.px) }
+                Rectangle { id: artMask; anchors.fill: artImg; radius: 46; visible: false; layer.enabled: true; layer.textureSize: Qt.size(width * win.px, height * win.px) }
                 MultiEffect { source: artImg; anchors.fill: artImg; maskEnabled: true; maskSource: artMask; visible: app.hasGame && buildPage.art !== "" }
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom; anchors.bottomMargin: 26
+                    anchors.bottom: parent.bottom; anchors.bottomMargin: 16
                     spacing: 8
                     visible: app.hasGame && !app.building
                     enabled: !win.restarting
-                    Pill { text: "Cambiar juego"; onClicked: app.chooseGame() }
-                    Pill { id: artPill; text: "Arte"; accessibleName: "Imagen e icono"; tip: app.artText; onClicked: artMenu.openAt(artPill) }
+                    Pill { text: "Cambiar juego"; fontSize: 16; implicitHeight: 34; onClicked: app.chooseGame() }
+                    Pill { id: artPill; text: "Arte"; fontSize: 16; implicitHeight: 34; accessibleName: "Imagen e icono"; tip: app.artText; onClicked: artMenu.openAt(artPill) }
                 }
                 ProgressPill {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom; anchors.bottomMargin: 34
-                    width: 280
+                    anchors.bottom: parent.bottom; anchors.bottomMargin: 30
+                    width: 256
                     value: app.progress
                     visible: app.building
                 }
@@ -601,53 +628,54 @@ ApplicationWindow {
 
             // under the tile: what to pick, or the game picked
             Item {
-                x: 224; y: 470; width: 420; height: 156
+                x: 224; y: 422; width: 420; height: 180
                 visible: !app.hasGame
-                Label { id: choose; anchors.horizontalCenter: parent.horizontalCenter; y: 6; text: "Elegir un juego"; color: pal.title; font.pixelSize: 46; font.letterSpacing: 1.3 }
+                Label { id: choose; anchors.horizontalCenter: parent.horizontalCenter; y: 6; text: "Elegir un juego"; color: pal.title; font.pixelSize: 40; font.letterSpacing: 1.0 }
                 Item {
                     x: choose.x; y: choose.y + choose.baselineOffset + 4
-                    width: choose.width; height: 22
+                    width: choose.width; height: 20
                     clip: true
                     Label {
-                        y: -choose.baselineOffset - 4 + 22 - 8
+                        y: -choose.baselineOffset - 4 + 20 - 8
                         text: choose.text; color: pal.title; font: choose.font; opacity: 0.1
                         transform: Scale { yScale: -1; origin.y: choose.baselineOffset }
                     }
                 }
-                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 63; text: ".3ds    .cci    .cia    .cxi"; color: pal.sub; font.pixelSize: 21 }
-                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 102; text: "cifrado o descifrado"; color: pal.sub; font.pixelSize: 21 }
-                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 123; text: "ctrl + o"; color: pal.sub; font.pixelSize: 21 }
+                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 60; text: ".3ds    .cci    .cia    .cxi"; color: pal.sub; font.pixelSize: 19 }
+                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 92; text: "cifrado o descifrado"; color: pal.sub; font.pixelSize: 18 }
+                Label { anchors.horizontalCenter: parent.horizontalCenter; y: 118; text: "Ctrl + O"; color: pal.sub; font.pixelSize: 17 }
             }
             Column {
-                x: 224; y: 474; width: 420
+                x: 218; y: 414; width: 432
                 visible: app.hasGame
-                spacing: 1
+                spacing: 4
                 Label {
                     width: parent.width; horizontalAlignment: Text.AlignHCenter
-                    text: app.gameName; color: pal.title; font.pixelSize: 36
-                    fontSizeMode: Text.HorizontalFit; minimumPixelSize: 22; elide: Text.ElideRight
+                    text: app.gameName; color: pal.title; font.pixelSize: 27; font.weight: Font.DemiBold
+                    fontSizeMode: Text.HorizontalFit; minimumPixelSize: 18; elide: Text.ElideRight
                 }
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 8
                     Light { tone: app.known ? "cyan" : "grey"; width: 16; height: 16; anchors.verticalCenter: parent.verticalCenter }
-                    Label { text: app.badge + (app.maker ? "  ·  " + app.maker : ""); color: pal.label; font.pixelSize: 18 }
+                    Label { text: app.badge + (app.maker ? "  ·  " + app.maker : ""); color: pal.label; font.pixelSize: 15 }
                 }
-                Label { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: app.meta; color: pal.sub; font.pixelSize: 16; elide: Text.ElideMiddle }
+                Label { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: app.meta; color: pal.sub; font.pixelSize: 14; elide: Text.ElideMiddle }
+                Pill { anchors.horizontalCenter: parent.horizontalCenter; text: "Editar información"; fontSize: 15; implicitHeight: 30; visible: app.hasGame; enabled: !win.busy; onClicked: app.editMetadata() }
                 Label {
                     width: parent.width; horizontalAlignment: Text.AlignHCenter
                     text: app.building ? app.detail : app.note
-                    color: pal.sub; font.pixelSize: 16; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
+                    color: pal.sub; font.pixelSize: 14; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight
                     HoverHandler { id: noteHover }
                     Tip { visible: noteHover.hovered && parent.truncated; text: parent.text; width: 420 }
                 }
             }
 
             Pill {
-                x: 224; y: 630; width: 418; height: 78
+                x: 230; y: 622; width: 408; height: 68
                 text: "¡Compilar!"
-                fontSize: 44
-                letterSpacing: 1.5
+                fontSize: 34
+                letterSpacing: 1.0
                 ink: pal.buildText
                 enabled: app.view === "form" && !win.restarting  // build() says what is missing; after a build its own card has the buttons
                 onClicked: app.hasGame ? app.build() : app.chooseGame()
@@ -664,14 +692,38 @@ ApplicationWindow {
                 Column {
                     id: rightCol
                     x: 20; y: 12
-                    spacing: 34
+                    spacing: 20
+
+                    Card {
+                        visible: app.view === "form" && app.hasGame
+                        title: "Vista previa"
+                        subtitle: "Pantallas de inicio y menú de Wii U · Haz clic en cualquiera para ampliar"
+                        Row {
+                            x: 24; width: 520; height: 136; spacing: 18
+                            Column {
+                                width: 190; spacing: 6
+                                Label { text: "TV · 1280 × 720"; color: pal.label; font.pixelSize: 14 }
+                                StartupPreview { width: 184; height: 104; kind: "tv"; onActivated: win.showPreview(kind) }
+                            }
+                            Column {
+                                width: 156; spacing: 6
+                                Label { text: "GamePad · 854 × 480"; color: pal.label; font.pixelSize: 14 }
+                                StartupPreview { width: 148; height: 83; kind: "pad"; onActivated: win.showPreview(kind) }
+                            }
+                            Column {
+                                width: 100; spacing: 6
+                                Label { text: "Icono Wii U"; color: pal.label; font.pixelSize: 14 }
+                                StartupPreview { width: 80; height: 80; kind: "icon"; onActivated: win.showPreview(kind) }
+                            }
+                        }
+                    }
 
                     // a newer release, from its offer to its being ready (gui.py's updater part)
                     Card {
                         id: updateCard
                         readonly property string st: app.updateState
                         visible: ["available", "downloading", "unpacking", "ready", "restarting", "failed"].indexOf(st) >= 0
-                        title: st === "failed" ? "La actualización se detuvo" : "Hay una nueva versión de Builder"
+                        title: st === "failed" ? "La actualización se detuvo" : "Hay una nueva versión disponible"
                         titleColor: st === "failed" ? pal.redText : pal.title
                         subtitle: app.updateTitle
                         Column {
@@ -681,19 +733,19 @@ ApplicationWindow {
                                 width: parent.width
                                 visible: text.length > 0
                                 text: updateCard.st === "available" ? app.updateNotes
-                                    : updateCard.st === "downloading" ? "Downloading... " + app.updateProgress + "%"
-                                    : updateCard.st === "unpacking" ? "Unpacking..."
-                                    : updateCard.st === "ready" ? "Listo. Se abrirá la próxima vez que inicies Builder."
+                                    : updateCard.st === "downloading" ? "Descargando... " + app.updateProgress + "%"
+                                    : updateCard.st === "unpacking" ? "Descomprimiendo..."
+                                    : updateCard.st === "ready" ? "Lista. Se abrirá la próxima vez que inicies el programa."
                                     : app.updateMessage
                                 textFormat: Text.PlainText  // release notes are Markdown from GitHub: shown as text, so no picture is fetched
-                                color: pal.label; font.pixelSize: 17; wrapMode: Text.WordWrap
+                                color: pal.label; font.pixelSize: 16; wrapMode: Text.WordWrap
                                 maximumLineCount: updateCard.st === "available" ? 3 : 8
                                 elide: Text.ElideRight
                             }
                             ProgressPill { width: parent.width; value: app.updateProgress / 100; visible: updateCard.st === "downloading" || updateCard.st === "unpacking" }
                         }
                         Item {
-                            width: 560; height: 62
+                            width: 560; height: 56
                             visible: updateCard.st !== "unpacking" && updateCard.st !== "restarting"
                             Row {
                                 anchors.right: parent.right; anchors.rightMargin: 21; y: 10
@@ -711,22 +763,31 @@ ApplicationWindow {
                         visible: app.view === "form"
                         enabled: !win.restarting
                         title: "Opciones adicionales"
-                        subtitle: "Permite compilar con una actualización, DLC o un mod.\nSe te preguntará por cada uno al seleccionar un juego."
+                        subtitle: "Permite integrar una actualización, DLC, mods o una partida guardada al compilar."
                         CardRow {
-                            label: "Actualización"; sub: app.hasUpdate ? app.updateText : "Ninguno seleccionado."; light: app.hasUpdate ? "cyan" : "red"
+                            label: "Actualización"; sub: app.hasUpdate ? app.updateText : "Ninguna seleccionada"; light: app.hasUpdate ? "cyan" : "red"
                             Pill { text: "Seleccionar"; tone: "cyan"; onClicked: app.hasGame ? app.chooseExtra("update") : app.chooseGame() }
                             Pill { text: "Quitar"; tone: "red"; onClicked: app.removeExtra("update") }
                         }
                         CardRow {
-                            label: "DLC"; sub: app.hasDlc ? app.dlcText : "Ninguno seleccionado."; light: app.hasDlc ? "cyan" : "red"
+                            label: "DLC"; sub: app.hasDlc ? app.dlcText : "Ninguno seleccionado"; light: app.hasDlc ? "cyan" : "red"
                             Pill { text: "Seleccionar"; tone: "cyan"; onClicked: app.hasGame ? app.chooseExtra("dlc") : app.chooseGame() }
                             Pill { text: "Quitar"; tone: "red"; onClicked: app.removeExtra("dlc") }
                         }
                         CardRow {
-                            label: "Mod"; sub: app.hasMod ? app.modText : "Ninguno seleccionado."; light: app.hasMod ? "cyan" : "red"
+                            label: "Mod"; sub: app.hasMod ? app.modText : "Ninguno seleccionado"; light: app.hasMod ? "cyan" : "red"
                             Pill { text: ".zip"; onClicked: app.hasGame ? app.chooseMod("zip") : app.chooseGame() }
                             Pill { text: "Carpeta"; tone: "cyan"; onClicked: app.hasGame ? app.chooseMod("folder") : app.chooseGame() }
                             Pill { text: "Quitar"; tone: "red"; onClicked: app.removeExtra("mod") }
+                        }
+                        CardRow {
+                            visible: app.isMk7
+                            label: "Online Pretendo 3DS (MK7)"
+                            sub: app.mk7Online ? "Activo: redirige MK7 a Pretendo 3DS (sin tocar Inkay) y genera un Friend Code único en cada compilación."
+                                               : "Desactivado: modo offline estándar."
+                            light: app.mk7Online ? "cyan" : "red"
+                            Pill { text: "Activado"; tone: app.mk7Online ? "cyan" : "grey"; onClicked: app.setMk7Online(true) }
+                            Pill { text: "Desactivado"; tone: !app.mk7Online ? "cyan" : "grey"; onClicked: app.setMk7Online(false) }
                         }
                         CardRow {
                             label: "Partida de 3DS"; sub: app.saveText; light: app.hasSave ? "cyan" : "grey"
@@ -738,8 +799,8 @@ ApplicationWindow {
                     Card {
                         visible: app.view === "form"
                         enabled: !win.restarting
-                        title: "Tus archivos"
-                        subtitle: "Estos archivos permanecerán en tu PC.\nBuilder nunca mostrará ni conservará las claves."
+                        title: "Archivos de consola"
+                        subtitle: "Archivos propios de tu 3DS y Wii U. Permanecen en tu PC y nunca se comparten."
                         CardRow {
                             label: "Claves de 3DS"; sub: app.keysText; light: app.keysOk ? "cyan" : app.keysNeeded ? "red" : "grey"
                             Pill { text: "Info"; onClicked: app.explain("keys") }
@@ -751,7 +812,7 @@ ApplicationWindow {
                             Pill { text: "Archivo"; tone: "cyan"; onClicked: app.chooseOtp() }
                         }
                         CardRow {
-                            label: "Archivos del sistema de 3DS"; sub: app.sysText; light: app.sysOk ? "cyan" : "red"
+                            label: "Archivos del sistema 3DS"; sub: app.sysText; light: app.sysOk ? "cyan" : "red"
                             Pill { text: "Info"; onClicked: app.explain("system") }
                             Pill { text: "Carpeta"; tone: "cyan"; onClicked: app.chooseSystem() }
                         }
@@ -761,16 +822,16 @@ ApplicationWindow {
                         visible: app.view === "form"
                         enabled: !win.restarting
                         title: "Destino"
-                        subtitle: "Dónde guardar el juego terminado: directamente en\nla tarjeta SD de tu Wii U o en una carpeta de este PC."
+                        subtitle: "Elige dónde guardar el paquete WUP listo para instalar: en tu tarjeta SD o en una carpeta."
                         CardRow {
-                            label: "Tarjeta SD"; sub: app.target === "card" ? app.destText : "Selecciona para guardarlo en una tarjeta SD."
+                            label: "Tarjeta SD"; sub: app.target === "card" ? app.destText : "Guardar directamente en la tarjeta SD de la Wii U"
                             light: app.target === "card" ? "cyan" : "grey"
                             tappable: true; role: Accessible.RadioButton; checked: app.target === "card"; onTapped: app.setTarget("card")
-                            Pill { text: "Volver a buscar"; onClicked: app.refreshCards() }
+                            Pill { text: "Actualizar"; accessibleName: "Volver a buscar tarjetas SD"; onClicked: app.refreshCards() }
                             Pill { id: cardsPill; text: "Seleccionar"; accessibleName: "Seleccionar una tarjeta SD"; tone: "cyan"; onClicked: cardMenu.openAt(cardsPill) }
                         }
                         CardRow {
-                            label: "Carpeta"; sub: app.target === "folder" ? app.destText : "Selecciona para guardarlo en una carpeta."
+                            label: "Carpeta en PC"; sub: app.target === "folder" ? app.destText : "Guardar en una carpeta de este equipo"
                             light: app.target === "folder" ? "cyan" : "grey"
                             tappable: true; role: Accessible.RadioButton; checked: app.target === "folder"; onTapped: app.setTarget("folder")
                             Pill { text: "Carpeta"; tone: "cyan"; onClicked: app.chooseFolder() }
@@ -779,7 +840,7 @@ ApplicationWindow {
 
                     Card {
                         visible: app.view === "building" || app.view === "failed"
-                        title: app.view === "failed" ? "La compilación se detuvo" : "Building"
+                        title: app.view === "failed" ? "La compilación se detuvo" : "Compilando"
                         subtitle: app.view === "failed" ? app.resultText : app.gameName
                         titleColor: app.view === "failed" ? pal.redText : pal.title
                         Repeater {
@@ -968,45 +1029,45 @@ ApplicationWindow {
                     }
                     CardRow {
                         label: "Sonido de inicio"
-                        sub: app.soundSet ? "Tu sonido se reproduce mientras se inicia un juego." : "Ninguno: los juegos se inician sin sonido. Selecciona un archivo WAV para agregarlo."
+                        sub: app.soundCustom ? "Tu WAV reemplaza el sonido base en los juegos que compiles." : "Sonido Virtual Console incluido; se usa mientras carga el juego si no asignas uno propio."
                         Pill { text: "Seleccionar"; accessibleName: "Seleccionar el sonido de inicio"; tone: "cyan"; onClicked: app.chooseSound() }
-                        Pill { text: "Quitar"; accessibleName: "Quitar el sonido de inicio"; tone: "red"; visible: app.soundSet; onClicked: app.removeSound() }
+                        Pill { text: "Quitar"; accessibleName: "Quitar el sonido personalizado"; tone: "red"; visible: app.soundCustom; onClicked: app.removeSound() }
                     }
                 }
                 Card {
                     width: 1030
                     title: "Acerca de"
-                    subtitle: "3Dii U Builder " + app.version
+                    subtitle: "3Dii-U Builder MOD " + app.version
                     CardRow {
-                        label: "Versión " + app.version; sub: "Gratuito y de código abierto: licencias y software incluido."
-                        Pill { text: "Acerca del proyecto y sus licencias"; onClicked: app.about() }
+                        label: "Versión " + app.version; sub: "Software libre y de código abierto: licencias y componentes incluidos."
+                        Pill { text: "Acerca del proyecto y licencias"; onClicked: app.about() }
                     }
                     CardRow {
-                        label: "Ventana"; sub: "Esta ventana o una versión sencilla con pestañas, botones y rutas de archivos."
-                        Pill { text: "Esta"; accessibleName: "Mantener esta ventana"; tone: "cyan" }
-                        Pill { text: "Sencilla"; accessibleName: "Cambiar a la ventana sencilla"; enabled: !app.building; onClicked: app.setLayout("simple") }
+                        label: "Interfaz"; sub: "Esta ventana moderna o una vista compacta con pestañas y rutas de archivos."
+                        Pill { text: "Moderna"; accessibleName: "Mantener esta ventana"; tone: "cyan" }
+                        Pill { text: "Compacta"; accessibleName: "Cambiar a la ventana sencilla"; enabled: !app.building; onClicked: app.setLayout("simple") }
                     }
                     CardRow {
                         id: updatesRow
                         readonly property string st: app.updateState
                         readonly property bool offered: ["available", "downloading", "unpacking", "ready", "restarting", "failed"].indexOf(st) >= 0
-                        label: app.releaseTag ? "Versión " + app.releaseTag : "Una compilación de prueba"
-                        sub: st === "checking" ? "Comprobando..." : st === "none" ? "No se encontró una versión más reciente."  // also what a check that couldn't reach GitHub ends in
-                            : st === "downloading" || st === "unpacking" ? "Se está descargando una versión más reciente."
-                            : st === "ready" || st === "restarting" ? "Hay una versión más reciente lista."
+                        label: app.releaseTag ? "Versión " + app.releaseTag : "Compilación personalizada (MOD)"
+                        sub: st === "checking" ? "Buscando actualizaciones..." : st === "none" ? "No se encontró ninguna versión más reciente."
+                            : st === "downloading" || st === "unpacking" ? "Descargando una versión más reciente."
+                            : st === "ready" || st === "restarting" ? "Hay una nueva versión lista para iniciar."
                             : offered ? "Hay una versión más reciente disponible." : ""
                         Pill { text: "Mostrar"; accessibleName: "Mostrar la actualización en la página Compilar"; tone: "cyan"; visible: updatesRow.offered; onClicked: win.page = "build" }
                         Pill { text: "Buscar actualizaciones"; enabled: app.updateState !== "checking"; onClicked: app.checkUpdate() }
                     }
                     Label {
-                        x: 64; width: 1030 - 64 - 40
+                        x: 60; width: 1030 - 60 - 40
                         visible: app.updateSetAside
-                        text: "Una actualización anterior no pudo iniciarse en este PC y se apartó. Busca actualizaciones para volver a intentarlo."
-                        color: pal.subLabel; font.pixelSize: 17; wrapMode: Text.WordWrap
+                        text: "Una actualización anterior no pudo iniciarse en este equipo y se descartó. Puedes buscar actualizaciones para intentarlo de nuevo."
+                        color: pal.subLabel; font.pixelSize: 15; wrapMode: Text.WordWrap
                         bottomPadding: 10
                     }
                     CardRow {
-                        label: "Apariencia"; sub: "El sistema sigue la configuración clara u oscura de Windows."
+                        label: "Apariencia"; sub: "Sigue automáticamente el modo claro u oscuro de Windows, o elígelo manualmente."
                         Pill { text: "Sistema"; accessibleName: "Tema del sistema"; tone: app.themeMode === "system" ? "cyan" : "grey"; onClicked: app.setThemeMode("system") }
                         Pill { text: "Claro"; accessibleName: "Tema claro"; tone: app.themeMode === "light" ? "cyan" : "grey"; onClicked: app.setThemeMode("light") }
                         Pill { text: "Oscuro"; accessibleName: "Tema oscuro"; tone: app.themeMode === "dark" ? "cyan" : "grey"; onClicked: app.setThemeMode("dark") }
@@ -1028,27 +1089,27 @@ ApplicationWindow {
             MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onClicked: cardMenu.visible = false; onWheel: (wheel) => wheel.accepted = true }
             Item {
                 x: Math.max(10, Math.min(cardMenu.at.x - width, 1270 - width)); y: Math.max(10, Math.min(cardMenu.at.y, 710 - height))
-                width: 380; height: menuCol.height + 24
+                width: 440; height: menuCol.height + 24
                 GlassFace { anchors.fill: parent; radius: 24; glossEdge: 40; bulge: 14 }
                 Column {
                     id: menuCol
-                    x: 12; y: 12; width: 356
+                    x: 12; y: 12; width: 416
                     Repeater {
                         model: app.cards
                         Rectangle {
-                            width: 356; height: 42; radius: 21
+                            width: 416; height: 42; radius: 21
                             color: pickHover.hovered ? pal.gloss : "transparent"
                             HoverHandler { id: pickHover }
-                            Label { x: 16; anchors.verticalCenter: parent.verticalCenter; text: modelData.label; color: pal.label; font.pixelSize: 17 }
+                            Label { x: 18; width: parent.width - 36; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter; text: modelData.label; color: pal.label; font.pixelSize: 16 }
                             Hit { ringRadius: 21; name: modelData.label; role: Accessible.MenuItem; onActivated: { cardMenu.visible = false; app.pickCard(modelData.path) } }
                         }
                     }
-                    Label { x: 16; height: 42; verticalAlignment: Text.AlignVCenter; visible: app.cards.length === 0; text: "No se encontró ninguna tarjeta SD"; color: pal.subLabel; font.pixelSize: 17 }
+                    Label { x: 18; width: 380; height: 42; verticalAlignment: Text.AlignVCenter; visible: app.cards.length === 0; text: "No se detectó ninguna tarjeta SD"; color: pal.subLabel; font.pixelSize: 16 }
                     Rectangle {
-                        width: 356; height: 42; radius: 21
+                        width: 416; height: 42; radius: 21
                         color: againHover.hovered ? pal.gloss : "transparent"
                         HoverHandler { id: againHover }
-                        Label { x: 16; anchors.verticalCenter: parent.verticalCenter; text: "Volver a buscar"; color: pal.cyanText; font.pixelSize: 17 }
+                        Label { x: 18; width: parent.width - 36; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter; text: "Volver a buscar tarjetas SD"; color: pal.cyanText; font.pixelSize: 16 }
                         Hit { id: lookAgain; ringRadius: 21; name: "Volver a buscar tarjetas SD"; role: Accessible.MenuItem; onActivated: app.refreshCards() }
                     }
                 }
@@ -1066,22 +1127,68 @@ ApplicationWindow {
             function openAt(item) { at = item.mapToItem(surface, item.width, item.height + 6); visible = true; artFirst.focusIn() }
             MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons; onClicked: artMenu.visible = false; onWheel: (wheel) => wheel.accepted = true }
             Item {
-                x: Math.max(10, Math.min(artMenu.at.x - width, 1270 - width)); y: Math.max(10, Math.min(artMenu.at.y, 710 - height))
-                width: 380; height: artCol.height + 24
+                x: Math.max(204, Math.min(artMenu.at.x - width / 2, 1266 - width)); y: Math.max(10, Math.min(artMenu.at.y, 710 - height))
+                width: 476; height: artCol.height + 24
                 GlassFace { anchors.fill: parent; radius: 24; glossEdge: 40; bulge: 14 }
                 Column {
                     id: artCol
-                    x: 12; y: 12; width: 356
-                    ArtEntry { id: artFirst; label: "Imagen de las pantallas de inicio..."; chosen: app.artText; onPicked: { artMenu.visible = false; app.chooseArt() } }
+                    x: 12; y: 12; width: 452
+                    ArtEntry { id: artFirst; label: "Imagen de inicio..."; chosen: app.artText; onPicked: { artMenu.visible = false; app.chooseArt() } }
                     ArtEntry { label: "Icono del menú de Wii U..."; chosen: app.iconText; onPicked: { artMenu.visible = false; app.chooseIcon() } }
-                    ArtEntry { label: "Imagen de inicio del GamePad..."; chosen: app.padArtText; onPicked: { artMenu.visible = false; app.choosePadArt() } }
-                    ArtEntry { label: "Sonido de este juego..."; chosen: app.gameSoundText; onPicked: { artMenu.visible = false; app.chooseGameSound() } }
+                    ArtEntry { label: "Pantalla de inicio del GamePad..."; chosen: app.padArtText; onPicked: { artMenu.visible = false; app.choosePadArt() } }
+                    ArtEntry { label: "Sonido de inicio del juego..."; chosen: app.gameSoundText; onPicked: { artMenu.visible = false; app.chooseGameSound() } }
                     ArtEntry { label: "Marco del GamePad..."; chosen: app.bezelText; onPicked: { artMenu.visible = false; app.chooseBezel() } }
-                    ArtEntry { label: "Quitar el marco"; danger: true; visible: app.hasBezel; onPicked: { artMenu.visible = false; app.removeBezel() } }
-                    ArtEntry { label: "Quitar el sonido del juego"; danger: true; visible: app.hasGameSound; onPicked: { artMenu.visible = false; app.removeGameSound() } }
-                    ArtEntry { label: "Quitar la imagen del GamePad"; danger: true; visible: app.hasPadArt; onPicked: { artMenu.visible = false; app.removePadArt() } }
-                    ArtEntry { label: "Quitar la imagen del icono"; danger: true; visible: app.hasIconArt; onPicked: { artMenu.visible = false; app.removeIcon() } }
-                    ArtEntry { label: "Quitar la imagen y el icono"; danger: true; visible: app.hasArt; onPicked: { artMenu.visible = false; app.removeArt() } }
+                    ArtEntry { label: "Quitar marco del GamePad"; danger: true; visible: app.hasBezel; onPicked: { artMenu.visible = false; app.removeBezel() } }
+                    ArtEntry { label: "Quitar sonido del juego"; danger: true; visible: app.hasGameSound; onPicked: { artMenu.visible = false; app.removeGameSound() } }
+                    ArtEntry { label: "Quitar imagen del GamePad"; danger: true; visible: app.hasPadArt; onPicked: { artMenu.visible = false; app.removePadArt() } }
+                    ArtEntry { label: "Quitar icono personalizado"; danger: true; visible: app.hasIconArt; onPicked: { artMenu.visible = false; app.removeIcon() } }
+                    ArtEntry { label: "Restaurar imagen e icono originales"; danger: true; visible: app.hasArt; onPicked: { artMenu.visible = false; app.removeArt() } }
+                }
+            }
+        }
+    }
+
+    Item {
+        id: previewDialog
+        width: win.width
+        height: win.height
+        visible: false
+        Rectangle {
+            anchors.fill: parent
+            color: pal.dim
+            MouseArea { anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.AllButtons; onClicked: previewDialog.visible = false; onWheel: (wheel) => wheel.accepted = true }
+        }
+        Item {
+            width: 1280; height: 720
+            x: (win.width - width) / 2
+            y: (win.height - height) / 2
+            scale: win.s
+            Item {
+                width: 1020
+                height: 656
+                anchors.centerIn: parent
+                GlassFace { anchors.fill: parent }
+                Light { x: 26; y: 18; tone: "cyan" }
+                Label {
+                    x: 62; y: 14
+                    text: win.previewKind === "tv" ? "Pantalla TV · 1280 × 720" : win.previewKind === "pad" ? "Pantalla GamePad · 854 × 480" : "Icono del menú de Wii U · 128 × 128"
+                    color: pal.title; font.pixelSize: 24; font.weight: Font.DemiBold
+                }
+                Pill {
+                    id: closePreviewPill
+                    anchors.right: parent.right; anchors.rightMargin: 24
+                    y: 12
+                    text: "Cerrar"
+                    tone: "cyan"
+                    onClicked: previewDialog.visible = false
+                }
+                StartupPreview {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 58
+                    kind: win.previewKind
+                    enlarged: true
+                    width: win.previewKind === "icon" ? 540 : 960
+                    height: 540
                 }
             }
         }
@@ -1143,5 +1250,5 @@ ApplicationWindow {
     Shortcut { sequences: [StandardKey.Open]; enabled: !win.blocked; onActivated: { win.page = "build"; app.chooseGame() } }
     Shortcut { sequence: "F1"; enabled: !win.blocked; onActivated: win.page = "help" }
     Shortcut { sequences: ["Return", "Enter"]; enabled: dialogLayer.visible && !noPill.hasFocus; onActivated: app.answer(true) }
-    Shortcut { sequence: "Escape"; enabled: win.blocked; onActivated: dialogLayer.visible ? app.answer(false) : cardMenu.visible = artMenu.visible = false }
+    Shortcut { sequence: "Escape"; enabled: win.blocked; onActivated: dialogLayer.visible ? app.answer(false) : (cardMenu.visible = artMenu.visible = previewDialog.visible = false) }
 }

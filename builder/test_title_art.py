@@ -141,6 +141,34 @@ with tempfile.TemporaryDirectory() as tmp:
         pictures[name] = os.path.join(tmp, name + '.png')
         assert img.save(pictures[name])
 
+    template_preview = title.minimal_3ds_screens(pictures['red'], 'A game', 'A publisher')
+    preview_tv, preview_pad = template_preview['bootTvTex.tga'], template_preview['bootDrcTex.tga']
+    assert (len(preview_tv), len(preview_tv[0]), len(preview_pad), len(preview_pad[0])) == (720, 1280, 480, 854)
+    assert near(preview_tv[350][300], (255, 0, 0)), 'the supplied template frame did not contain the game art'
+    assert near(preview_tv[250][100], (255, 0, 0)) and near(preview_tv[550][530], (255, 0, 0)), 'the game art does not fill the template outline'
+    assert not any(sum(preview_tv[y][x]) < 300 for y in range(70, 180) for x in range(780, 1230)), 'the old header Nintendo 3DS logo was not removed'
+    assert any(sum(preview_tv[y][x]) < 300 for y in range(220, 355) for x in range(540, 900)), 'the relocated Nintendo 3DS branding was not rendered in the information card'
+    assert any(preview_tv[y][x][0] > 120 and preview_tv[y][x][1] < 100 and preview_tv[y][x][2] < 100
+               for y in range(220, 355) for x in range(540, 900)), 'the relocated 3DS red mark was not rendered'
+    assert sum(preview_tv[440][1000]) < 720, 'the glass information card hides the 3DS artwork behind it'
+    assert any(sum(preview_tv[y][x]) < 350 for y in range(290, 385) for x in range(570, 900)), 'the game title text was not rendered'
+
+    # A portrait photo is stretched into the complete frame, so all four source corners stay visible.
+    corners = QImage(400, 800, QImage.Format_RGB888)
+    p = QPainter(corners)
+    p.fillRect(0, 0, 200, 400, QColor('#20d050'))
+    p.fillRect(200, 0, 200, 400, QColor('#3050e0'))
+    p.fillRect(0, 400, 200, 400, QColor('#f0d020'))
+    p.fillRect(200, 400, 200, 400, QColor('#d030c0'))
+    p.end()
+    portrait = os.path.join(tmp, 'portrait.png')
+    assert corners.save(portrait)
+    stretched = title.minimal_3ds_screens(portrait, 'A game')['bootTvTex.tga']
+    assert near(stretched[225][110], (32, 208, 80), 20)
+    assert near(stretched[225][520], (48, 80, 224), 20)
+    assert near(stretched[550][110], (240, 208, 32), 20)
+    assert near(stretched[550][520], (208, 48, 192), 20), 'the picture was cropped instead of fit to the frame'
+
     def made(style, pad_art=None, boot_sound=None):
         out = os.path.join(tmp, 'title')
         title.make_title(out, game, os.path.join(tmp, 'g.rpx'), shaders, '0005000010334455', 'A game', 'WUP-N-ABCD', archives,
@@ -157,10 +185,19 @@ with tempfile.TemporaryDirectory() as tmp:
     middle, sound = made('picture', pictures['green'], os.path.join(tmp, 'own.btsnd'))
     assert near(middle['bootTvTex.tga'], (255, 0, 0)) and near(middle['bootDrcTex.tga'], (0, 255, 0)) and sound == own, (middle, sound)
     middle, sound = made('console', pictures['green'], os.path.join(tmp, 'gone.btsnd'))
-    assert near(middle['bootTvTex.tga'], (255, 255, 255), 12), ("the TV lost the Virtual Console's layout", middle)  # its white band
+    assert near(middle['bootTvTex.tga'], (254, 254, 254), 10), ("the translucent Virtual Console glass or template artwork changed", middle)
     assert near(middle['bootDrcTex.tga'], (0, 255, 0)) and sound == every, ('the GamePad picture laid out, or a lost sound kept', middle, sound)
     middle, sound = made('picture', os.path.join(tmp, 'bad.png'), os.path.join(tmp, 'bad.btsnd'))
     assert near(middle['bootDrcTex.tga'], (255, 0, 0)) and sound == every, ("a picture or sound that can't be used wasn't left out", middle, sound)
     sound = made('picture', boot_sound=os.path.join(tmp, 'start.wav'))[1]
     assert sound[:4] == struct.pack('>I', 2) and len(sound) > 8 + 4 * 24000 // 2, 'a WAV given as the sound was not made into one'
+
+    # With no per-game or user-wide sound, every title carries the bundled Virtual Console boot sound.
+    empty_archives = os.path.join(tmp, 'default_sound', 'empty_archives')
+    os.makedirs(empty_archives, exist_ok=True)
+    default_title = os.path.join(tmp, 'default_sound_title')
+    title.make_title(default_title, game, os.path.join(tmp, 'g.rpx'), shaders, '0005000010334455', 'A game', 'WUP-N-ABCD', empty_archives)
+    packaged = open(os.path.join(default_title, 'meta', 'bootSound.btsnd'), 'rb').read()
+    bundled = open(os.path.join(title.ROOT, 'phase0', 'title_code', 'meta', 'bootSound.btsnd'), 'rb').read()
+    assert packaged == bundled, 'a title without a custom sound did not use the bundled default'
 print('title art: ok')

@@ -66,15 +66,18 @@ def fresh_cache(engine, work):
 
 
 def use_engine(root):
-    """With its own engine the app brings its toolchain too, and builds in a folder of the user's: its own folder may be read-only."""
+    """With its own engine the app brings its toolchain too, and builds in a folder beside the app when writable (else user's AppData)."""
     if root and os.path.basename(root) == 'engine':
+        app_parent = os.path.dirname(os.path.dirname(os.path.abspath(sys.executable))) if FROZEN else os.path.dirname(os.path.dirname(HERE))
+        local_datos = os.path.join(app_parent, 'Builder_Datos')
         base = os.environ.get('LOCALAPPDATA') or os.path.join(os.path.expanduser('~'), '.local', 'share')
-        work = os.environ.setdefault('THREEDII_WORK', os.path.join(base, '3Dii U Builder'))
+        default_work = local_datos if os.path.isdir(local_datos) else os.path.join(base, '3Dii U Builder')
+        work = os.environ.setdefault('THREEDII_WORK', default_work)
         if 'THREEDII_ROOT' not in os.environ:  # once, in the window: the builds it starts inherit the cache as it left it
             fresh_cache(root, work)
         root = short_path(root, work)
         os.environ.setdefault('THREEDII_DEVKITPRO', os.path.join(root, 'devkitpro').replace('\\', '/'))
-        os.environ.setdefault('THREEDII_SHADERGEN', os.path.join(root, 'bin', 'shadergen.exe'))
+        os.environ.setdefault('THREEDII_SHADERGEN', os.path.join(root, 'bin', 'shadergen.exe' if os.name == 'nt' else 'shadergen'))
     os.environ.setdefault('THREEDII_ROOT', root)  # pipeline.py reads these, and the build's own processes inherit them
 
 

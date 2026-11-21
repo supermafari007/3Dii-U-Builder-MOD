@@ -20,9 +20,9 @@ def check_otp(path):
     """None for a usable Wii U OTP dump, otherwise what's wrong with it"""
     size = _size(path)
     if size is None:
-        return 'otp.bin is missing. It comes from your own Wii U\'s NAND backup.'
+        return 'Falta otp.bin. Se obtiene de la copia de seguridad de la NAND de tu propia Wii U.'
     if size != OTP_SIZE:
-        return f'That otp.bin isn\'t a Wii U OTP dump: it should be exactly {OTP_SIZE} bytes.'
+        return f'Ese archivo otp.bin no es un volcado OTP válido de Wii U: debe medir exactamente {OTP_SIZE} bytes.'
     with open(path, 'rb') as f:
         slot = f.read()[OTP_COMMON_KEY]
     if slot in (bytes(16), b'\xff' * 16):
@@ -36,7 +36,7 @@ def check_boot9(path):
     if size is None:
         return 'Falta boot9.bin. Se obtiene de tu propia 3DS.'
     if size not in BOOT9_SIZES:
-        return 'That boot9.bin isn\'t a 3DS boot ROM dump: it should be 64 KB (or 32 KB, its protected half).'
+        return 'Ese archivo boot9.bin no es una boot ROM válida de 3DS: debe medir 64 KB (o 32 KB en su mitad protegida).'
     return None
 
 
@@ -49,7 +49,7 @@ def check_seeddb(path):
         head = f.read(4)
     count = struct.unpack('<I', head)[0] if len(head) == 4 else -1
     if count < 0 or size != 0x10 + count * 0x20:
-        return 'That seeddb.bin isn\'t a seed database: its size doesn\'t match the number of seeds it says it holds.'
+        return 'Ese archivo seeddb.bin no es una base de datos de semillas (seed) válida: su tamaño no coincide con las entradas declaradas.'
     return None
 
 

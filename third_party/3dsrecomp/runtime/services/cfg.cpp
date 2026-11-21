@@ -8,13 +8,13 @@ namespace kernel {
 
 int g_system_language = -1;
 
-static u32 cfg_region() {
-    // 0 JPN, 1 USA, 2 EUR, 3 AUS, 4 CHN, 5 KOR, 6 TWN: the game's own region (SMDH), EUR for region-free ones
-    if (const char *r = getenv("RECOMP_REGION")) return (u32)atoi(r);
-    return g_game.region >= 0 && g_game.region != 3 ? (u32)g_game.region : 2;
-}
+u32 cfg_languages() { return regions_languages(g_game.regions); }
 
-u32 cfg_languages() { return region_languages(cfg_region()); }
+// 0 JPN, 1 USA, 2 EUR, 3 AUS, 4 CHN, 5 KOR, 6 TWN: of the game's own regions (SMDH), one that has its language (languages.h)
+static u32 cfg_region() {
+    if (const char *r = getenv("RECOMP_REGION")) return (u32)atoi(r);
+    return pick_region(g_game.regions, cfg_language());
+}
 
 // The game's language, the same all run, as a game may ask more than once (languages.h): the one picked in the options menu
 // (settings.ini), else the console's own
@@ -62,7 +62,16 @@ static void fill_block(u32 id, u32 dst, u32 size) {
         if (size >= 8) w64(dst, 0x0000123456789ABCull);
         break;
     case 0x000A0000:  // user name
-        put_utf16(dst, "Mario", std::min<u32>(size / 2, 10));
+        {
+            // MOD: the user name is the player's Mii's (the current Wii U account's), UTF-16LE at 0x1A of its store data
+            const auto mii = player_mii();
+            const u32 max = std::min<u32>(size / 2, 10);
+            for (u32 i = 0; i < max; i++) {
+                const u16 ch = (u16)(mii[0x1A + 2 * i] | mii[0x1B + 2 * i] << 8);
+                if (!ch) break;
+                w16(dst + 2 * i, ch);
+            }
+        }
         break;
     case 0x000A0001:  // birthday
         if (size >= 2) { w8(dst, 1); w8(dst + 1, 1); }

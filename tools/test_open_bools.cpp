@@ -1,5 +1,6 @@
 // Checks, on a PC, the vertex shader that reads its bool uniforms as it runs (shadergen.h's kVsBoolsMade): for a small program made up here
-// that tests eleven bools, one more than a build makes every set of. `python tools/selftest.py` builds it with the generator's own objects.
+// that tests eleven bools, one more than a build makes every set of; shader_ends, which keeps a set no run ends with out of the build; and
+// how a forward jump is written. `python tools/selftest.py` builds it with the generator's own objects.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -21,7 +22,7 @@ static void expect(bool ok, const char *what) {
 // ---- PICA instructions (shader.cpp's decode_one has the layouts)
 static u32 mov(u32 out, u32 in) { return 0x13u << 26 | out << 21 | in << 12; }  // o<out> = v<in>, with operand descriptor 0
 static u32 flow(u32 op, u32 bid, u32 dst, u32 num) { return op << 26 | bid << 22 | dst << 10 | num; }
-enum : u32 { NOP = 0x21u << 26, END = 0x22u << 26, CALLU = 0x26, IFU = 0x27, JMPU = 0x2d };
+enum : u32 { NOP = 0x21u << 26, END = 0x22u << 26, CALLU = 0x26, IFU = 0x27, LOOP = 0x29, JMPU = 0x2d };
 
 // Bools 0 to `bools` - 1 each decide something: an if, an if with an else, a call, a jump taken when its bool is clear, then plain ifs.
 static std::vector<u32> program(u32 bools) {
@@ -61,7 +62,8 @@ int main() {
     // the sense of each kind of test: what follows it is what the program does when the test holds
     const size_t if1 = open.find("if (((uInt[0].w >> 1) & 1) != 0) {"), else1 = open.find("} else {", if1), v1 = open.find("v1", if1), v2 = open.find("v2", if1);
     expect(if1 != std::string::npos && v1 < else1 && else1 < v2, "an if on an open bool: its own branch first, the other after the else");
-    expect(open.find("if (!(((uInt[0].w >> 3) & 1) != 0)) {") != std::string::npos, "a jump taken when its bool is clear tests for clear");
+    const size_t if3 = open.find("if (!(!(((uInt[0].w >> 3) & 1) != 0))) {"), v3 = open.find("v3", if3);
+    expect(if3 != std::string::npos && v3 < open.find('}', if3), "a jump taken when its bool is clear: what it skips runs when the bool is set");
 
     // decided the usual way, nothing is read as it runs, and each set of bools gives its own code
     bool none[16] = {}, some[16] = {}, others[16] = {};
@@ -80,6 +82,36 @@ int main() {
     expect(k == vs_variant_key(p, 0, some, slots, 0x7FF) && k == vs_variant_key(p, 0, others, slots, 0x7FF), "open bools aren't in the open shader's key");
     expect(k != vs_variant_key(p, 0, none, slots) && k != vs_variant_key(p, 0, some, slots), "the open shader's key is no decided shader's");
     expect(vs_variant_key(p, 0, some, slots) != vs_variant_key(p, 0, others, slots), "decided shaders keep a key for each set");
+
+    // a set of bools under which the program goes round for ever, which a build making every set makes up: 0: if (b14) jump to 3; 1: o0 = v0;
+    // 2: if (b0) jump back to 1; 3: end. With b0 and not b14 no run ends.
+    std::vector<u32> loop = {flow(JMPU, 14, 3, 0), mov(0, 0), flow(JMPU, 0, 1, 0), END};
+    loop.resize(512);
+    ShaderProgram *r = shader_decode(loop.data(), 4, swizzle);
+    expect(!shader_ends(r, 0, 1u << 0), "jumping back on b0 with b14 clear never ends");
+    expect(shader_ends(r, 0, 0) && shader_ends(r, 0, 1u << 14) && shader_ends(r, 0, 1u << 0 | 1u << 14), "every other set ends");
+    expect(shader_ends(p, 0, 0) && shader_ends(p, 0, 0x7FF), "the program above ends with any set");
+    // one that ends only by an if: 0: if (b1) run 1, else 2; 1: if (b0) jump to 1, which runs the word before the if's end, so it closes; 2: end
+    std::vector<u32> by_if = {flow(IFU, 1, 2, 1), flow(JMPU, 0, 1, 0), END, NOP};
+    by_if.resize(512);
+    ShaderProgram *f = shader_decode(by_if.data(), 4, swizzle);
+    expect(shader_ends(f, 0, 1u << 0 | 1u << 1) && shader_ends(f, 0, 1u << 0), "a run that only leaves through an if's end ends");
+
+    // A forward jump over a stretch that nests is an if around it, and the code after it is written once: 0: if (b0) jump to 2; 1: o1 = v1;
+    // 2: o0 = v2; 3: end
+    std::vector<u32> over = {flow(JMPU, 0, 2, 0), mov(1, 1), mov(0, 2), END};
+    over.resize(512);
+    ShaderProgram *o = shader_decode(over.data(), 4, swizzle);
+    const std::string once = gen_vs_glsl(o, 0, 0, iu, slots, &inputs, 1);
+    const std::string body = once.substr(once.find("void main()"));
+    expect(!once.empty() && body.find("v2") != std::string::npos && body.find("v2") == body.rfind("v2"), "the code after a jump is written once");
+    // A jump onto a loop's end leaves the loop open in shader_run (it pops a region only after the word before its end), so that stays with
+    // the CPU: 0: loop to 2; 1: if (b0) jump to 3; 2: o0 = v0; 3: end
+    std::vector<u32> onto = {flow(LOOP, 0, 2, 0), flow(JMPU, 0, 3, 0), mov(0, 0), END};
+    onto.resize(512);
+    ShaderProgram *l = shader_decode(onto.data(), 4, swizzle);
+    expect(gen_vs_glsl(l, 0, 1u << 0, iu, slots, &inputs).empty() && !gen_vs_glsl(l, 0, 0, iu, slots, &inputs).empty(),
+           "a jump onto a loop's end isn't written as the loop's end");
 
     printf(failures ? "open bools: %d failed\n" : "open bools: ok\n", failures);
     return failures ? EXIT_FAILURE : EXIT_SUCCESS;

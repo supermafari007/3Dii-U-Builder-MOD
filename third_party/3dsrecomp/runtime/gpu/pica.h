@@ -130,8 +130,12 @@ u64 shader_program_hash(const ShaderProgram *p);  // of the code and swizzle wor
 std::string shader_msl(const ShaderProgram *p, u32 entry, const char *name);
 // the same for one set of bool/int uniforms (flow resolved statically), or "" if it cannot be done exactly
 std::string shader_msl_spec(const ShaderProgram *p, u32 entry, const char *name, u32 b, const u8 (*iu)[4]);
+// false only if no run from entry with the bools b reaches END: a set no game draws with (a build makes every set of an entry's bools)
+bool shader_ends(const ShaderProgram *p, u32 entry, u32 b);
 // open: the bools not decided here. The code reads those as it runs, each a bit of the uniform block's uInt[0].w, so one shader serves every set of them.
 std::string shader_glsl_spec(const ShaderProgram *p, u32 entry, u32 b, const u8 (*iu)[4], u32 *inputs, u32 open = 0);
+extern int shader_glsl_fail_line;  // why the last one came out empty: the line in shader.cpp that gave up, and the instruction
+extern u32 shader_glsl_fail_at;
 // A geometry shader's body for the GLSL vertex shader that draws what it emits, one corner of one triangle a vertex: its registers are named
 // with a "g" before them, its uniforms gf and gInt, and each EMIT keeps the registers of out_comps (the output components the output map
 // reads, register * 4 + component) for the corner wantJ of the triangle wantT (port/wiiu/shadergen.cpp, gen_gsx_glsl). in_regs: the input
@@ -150,6 +154,9 @@ u32 shader_static_uniforms(const ShaderProgram *p, u32 *loops);
 void shader_entry_info(const ShaderProgram *p, u32 entry, u64 *id, u32 *bmask, u32 *lmask);
 // is this Level-5's outline geometry shader? If so, which uniforms hold its colour and thickness
 bool shader_outline_gs(const ShaderProgram *p, u32 *color_reg, u32 *thick_reg);
+#ifdef __WIIU__
+void gx2_note_gs(u32 entry, const ShaderSetup &s);  // a geometry shader the CPU runs, for the next build (gx2_backend.cpp)
+#endif
 int shader_outline_normal(const ShaderProgram *p, u32 entry);
 constexpr s8 kOutlineSlot = -128;  // in a vertex shader's output map: it draws such an outline (see gen_vs_glsl)
 bool shader_run4(const ShaderProgram *p, ShaderUnit4 &u, const V4 *uniforms, const bool *b,
@@ -583,6 +590,8 @@ bool gx2_memory_fill(u32 start, u32 end, u32 value, u32 control);  // true: done
 extern bool gx2_skip_pass;  // what's being drawn now is a right eye nothing will show
 extern bool gx2_skip_copies;  // and its texture copies only feed that same right eye
 bool gx2_texture_copy(u32 in_paddr, u32 out_paddr, u32 size, u32 in_width_gap, u32 out_width_gap);  // true: done on the GPU, guest memory left as it was
+void gx2_copied_to_memory(u32 paddr, u32 size);  // a texture copy or display transfer wrote guest memory (an LCD buffer the game fills itself)
+extern u64 g_cpu_route[4];  // draws shaded on the CPU: through a geometry shader (draws, vertices), continuing a primitive (draws, vertices)
 #endif
 // deferred draws (vertex.cpp): draws are recorded and processed in parallel at batch flush
 bool vtx_jobs_pending();
@@ -660,8 +669,13 @@ enum VtxCpuWhy { VCPU_NO_SHADER, VCPU_GEOMETRY, VCPU_CONTINUED, VCPU_COUNT };
 struct VtxCpuStats {
     u64 draws[VCPU_COUNT], verts[VCPU_COUNT];
     double ms[VCPU_COUNT];
+    double geometry_vs_ms;  // of ms[VCPU_GEOMETRY], what the vertex shader took (the rest: the geometry shader and assembling)
+    double geometry_gs_ms;  // and the geometry shader's runs, its EMITs with them
+    double geometry_emit_ms;  // of those, the EMITs: mapping the vertices and handing the primitives on (timed one in sixteen, and scaled)
+    u64 geometry_prims;
 };
 extern VtxCpuStats vtx_cpu;
+extern bool g_gs_shared;  // a draw's geometry shader runs go to two threads where they can (vertex.cpp: gs_run_shared); a switch for a console
 // texture decoding (texture.cpp), for RECOMP_STATS (the Metal backend logs and resets them)
 extern double g_tex_decode_ms;
 extern u32 g_tex_decodes;

@@ -21,12 +21,12 @@ with tempfile.TemporaryDirectory() as tmp:
     good = bytearray(1024)
     good[uf.OTP_COMMON_KEY] = os.urandom(16)
     assert uf.check_otp(put(tmp, 'otp.bin', bytes(good))) is None
-    assert 'empty' in uf.check_otp(put(tmp, 'blank/otp.bin', bytes(1024)))
+    assert any(w in uf.check_otp(put(tmp, 'blank/otp.bin', bytes(1024))) for w in ('empty', 'vacío'))
     assert '1024' in uf.check_otp(put(tmp, 'short/otp.bin', bytes(1000)))
-    assert 'missing' in uf.check_otp(os.path.join(tmp, 'nowhere', 'otp.bin'))
+    assert any(w in uf.check_otp(os.path.join(tmp, 'nowhere', 'otp.bin')) for w in ('missing', 'Falta'))
 
     keys = os.path.join(tmp, 'keys')
-    assert 'missing' in uf.check_key_folder(keys)
+    assert any(w in uf.check_key_folder(keys) for w in ('missing', 'Falta'))
     put(keys, 'boot9.bin', os.urandom(0x10000))
     assert uf.check_key_folder(keys) is None  # no seeddb.bin is fine
     assert uf.check_boot9(put(tmp, 'half/boot9.bin', os.urandom(0x8000))) is None

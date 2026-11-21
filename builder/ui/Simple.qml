@@ -9,12 +9,12 @@ import QtQuick.Layouts
 ApplicationWindow {
     id: win
     objectName: "simple"  // gui.place sizes it by its own size
-    width: 780
-    height: 580
-    minimumWidth: 640
-    minimumHeight: 480
+    width: 820
+    height: 600
+    minimumWidth: 680
+    minimumHeight: 500
     visible: false  // gui.run() places it and shows it, so a check can load it unseen
-    title: "3Dii U Builder " + app.version
+    title: "3Dii-U Builder MOD " + app.version
     font.family: T.font
     font.pixelSize: 13
 
@@ -35,6 +35,8 @@ ApplicationWindow {
     color: palette.window
 
     readonly property bool busy: app.building || app.updateState === "restarting"
+    property string previewKind: "tv"
+    function showPreview(kind) { previewKind = kind; previewDialog.open() }
 
     // [Button] [the path or what's chosen] (Remove)
     component PathRow: RowLayout {
@@ -44,23 +46,22 @@ ApplicationWindow {
         signal choose()
         signal remove()
         Layout.fillWidth: true
-        spacing: 6
-        Button { id: pick; Layout.preferredWidth: 150; enabled: !win.busy; onClicked: parent.choose() }
+        spacing: 8
+        Button { id: pick; Layout.preferredWidth: 195; enabled: !win.busy; onClicked: parent.choose() }
         TextField { id: path; readOnly: true; Layout.fillWidth: true; selectByMouse: true }
         Button { text: "Quitar"; visible: parent.removable; enabled: !win.busy; onClicked: parent.remove() }
     }
     component Preview: ColumnLayout {
         property alias caption: cap.text
-        property alias source: img.source
+        property string kind: "tv"
         property int boxWidth: 128
         spacing: 4
         Label { id: cap; Layout.alignment: Qt.AlignHCenter }
-        Rectangle {
+        StartupPreview {
             Layout.preferredWidth: parent.boxWidth
-            Layout.preferredHeight: 128
-            color: win.palette.base
-            border.color: win.palette.mid
-            Image { id: img; anchors.fill: parent; anchors.margins: 2; fillMode: Image.PreserveAspectFit; smooth: true; mipmap: true }
+            Layout.preferredHeight: parent.kind === "icon" ? parent.boxWidth : parent.boxWidth * 9 / 16
+            kind: parent.kind
+            onActivated: win.showPreview(kind)
         }
     }
 
@@ -132,11 +133,13 @@ ApplicationWindow {
                     Label { text: "En Wii U:" }
                     Label { text: app.hasGame ? app.badge : "-" }
                 }
+                Button { text: "Editar nombre y distribuidor..."; enabled: !win.busy && app.hasGame; onClicked: app.editMetadata() }
                 Label { text: app.note; wrapMode: Text.WordWrap; Layout.fillWidth: true; opacity: 0.85 }
                 RowLayout {
                     spacing: 16
-                    Preview { caption: "Icono del menú de Wii U"; source: app.iconArtUrl || app.artUrl || app.icon }
-                    Preview { caption: "Imagen de inicio"; source: app.artUrl; boxWidth: 228 }
+                    Preview { caption: "Icono del menú de Wii U"; kind: "icon" }
+                    Preview { caption: "TV · Nintendo 3DS · 1280 × 720"; kind: "tv"; boxWidth: 228 }
+                    Preview { caption: "GamePad · 854 × 480"; kind: "pad"; boxWidth: 190 }
                 }
                 Item { Layout.fillHeight: true }
             }
@@ -219,8 +222,8 @@ ApplicationWindow {
                 RowLayout {
                     spacing: 6
                     Button { text: "Sonido de inicio..."; Layout.preferredWidth: 220; onClicked: app.chooseSound() }
-                    Label { Layout.fillWidth: true; text: app.soundSet ? "Tu sonido se reproduce al iniciar un juego." : "Ninguno: los juegos se inician sin sonido." }
-                    Button { text: "Quitar"; visible: app.soundSet; onClicked: app.removeSound() }
+                    Label { Layout.fillWidth: true; text: app.soundCustom ? "Tu WAV reemplaza el sonido base." : "Sonido Virtual Console incluido; se usa mientras carga el juego." }
+                    Button { text: "Quitar"; visible: app.soundCustom; onClicked: app.removeSound() }
                 }
                 Item { Layout.fillHeight: true }
             }
@@ -284,6 +287,33 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    Dialog {
+        id: previewDialog
+        parent: Overlay.overlay
+        anchors.centerIn: parent
+        modal: true
+        width: Math.min(win.width - 40, 1040)
+        height: Math.min(win.height - 40, 660)
+        title: previewKind === "tv" ? "Pantalla TV · 1280 × 720" : previewKind === "pad" ? "Pantalla GamePad · 854 × 480" : "Icono Wii U · 128 × 128"
+        contentItem: Item {
+            implicitWidth: previewDialog.availableWidth
+            implicitHeight: previewDialog.availableHeight
+            StartupPreview {
+                anchors.centerIn: parent
+                kind: win.previewKind
+                enlarged: true
+                readonly property real ratio: win.previewKind === "icon" ? 1 : 16 / 9
+                width: Math.min(parent.width, parent.height * ratio)
+                height: width / ratio
+            }
+        }
+        footer: RowLayout {
+            Item { Layout.fillWidth: true }
+            Button { text: "Cerrar"; onClicked: previewDialog.close() }
+            Item { Layout.preferredWidth: 8 }
         }
     }
 

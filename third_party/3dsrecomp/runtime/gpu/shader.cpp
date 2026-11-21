@@ -1140,6 +1140,33 @@ u32 shader_static_uniforms(const ShaderProgram *P, u32 *loops) {
     return bmask;
 }
 
+// Over every way a run could go (each condition both ways, every call's body, both ends of every if, every loop's exit), so false only where
+// no run ends: the jumps the bools take go round for ever.
+bool shader_ends(const ShaderProgram *P, u32 entry, u32 b) {
+    const u32 n = (u32)P->ins.size();
+    std::vector<char> seen(n + 1, 0);
+    std::vector<u32> todo{std::min(entry, n)};
+    while (!todo.empty()) {
+        u32 i = todo.back();
+        todo.pop_back();
+        while (!seen[i]) {
+            seen[i] = 1;
+            if (i == n || P->ins[i].op == OP_END) return true;
+            const DInst &I = P->ins[i];
+            auto at = [&](u32 a) { return std::min(a, n); };
+            if (I.op == OP_JMPU && ((b >> I.bid) & 1) == !(I.fnum & 1)) {
+                i = at(I.fdst);
+                continue;
+            }
+            if (I.op == OP_JMPC || I.op == OP_CALL || I.op == OP_CALLC || I.op == OP_CALLU) todo.push_back(at(I.fdst));
+            if (I.op == OP_IFU || I.op == OP_IFC) todo.insert(todo.end(), {at(I.fdst), at(I.fdst + I.fnum)});
+            if (I.op == OP_LOOP) todo.push_back(at(I.fdst + 1));
+            i++;
+        }
+    }
+    return false;
+}
+
 // The same program specialized for one set of bool and int uniforms: their if/call/jump decisions and
 // loop counts are resolved here, so the kernel is plain structured code (if/else, for, break) with only
 // the per-vertex conditions left, which the GPU runs far faster than the program-counter loop. Programs
@@ -1156,6 +1183,8 @@ struct SpecGen {
     static std::string open_bool(const DInst &I) { return "((uInt[0].w >> " + std::to_string(I.bid) + ") & 1) != 0"; }
     int loops = 0, ifs = 0, calls = 0, counter = 0;
     bool fail = false;
+    int why = 0;  // the source line that gave up, and the instruction (shader_glsl_fail)
+    u32 at = 0;
     // A geometry shader (shader_glsl_gs): each vertex of the GLSL shader is one corner of one triangle the program emits, so every EMIT is
     // written out once, keeping that corner if it's this vertex's (wantT, wantJ). Whatever a run of shader_run carries over from the run before
     // (an emit's vertex id and flags, the triangle slots, an output bank's registers, temporaries, address registers, condition flags, input
@@ -1266,7 +1295,32 @@ struct SpecGen {
         ends.push_back(x);
         return true;
     }
+    // Whether an active region ends at x. Control that arrives there other than by running the word before it (a jump onto it, a return
+    // to it, the end of an inner region) pops nothing in shader_run, so the region stays open; anywhere else, the code just goes on from x.
+    bool region_end(u32 x) const { return std::find(ends.begin(), ends.end(), x) != ends.end(); }
     static bool plain(const DInst &I) { return I.op <= OP_MAD || I.op == OP_NOP; }
+    // whether every jump, if and loop in [s, d) stays within [s, d]: then a forward jump from s - 1 to d is an if around [s, d)
+    bool nests(u32 s, u32 d) const {
+        for (u32 x = s; x < d && x < n; x++) {
+            const DInst &J = P->ins[x];
+            switch (J.op) {
+            case OP_JMPC:
+            case OP_JMPU:
+                if (J.fdst <= x || J.fdst > d) return false;
+                break;
+            case OP_IFC:
+            case OP_IFU:
+                if (J.fdst < x + 1 || J.fdst + J.fnum > d) return false;
+                break;
+            case OP_LOOP:
+                if (J.fdst < x + 1 || J.fdst + 1 > d) return false;
+                break;
+            default:
+                break;
+            }
+        }
+        return true;
+    }
     bool emits_in(u32 s, u32 e) const {
         for (u32 k = s; k < e && k < n; k++)
             if (P->ins[k].op == OP_EMIT) return true;
@@ -1435,7 +1489,7 @@ struct SpecGen {
         u32 i = s;
         while (i < e && !fail) {
             if (w.o.size() > 400000) {
-                fail = true;
+                fail = true; why = __LINE__; at = i;
                 break;
             }
             if (i >= n) {  // past the program: shader_run stops
@@ -1465,7 +1519,7 @@ struct SpecGen {
             case OP_BREAKC:
                 if (!loops) break;  // outside loops: no effect
                 if (!in_loop || ifs || calls) {
-                    fail = true;
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 if (I.op == OP_BREAK) {
@@ -1484,8 +1538,9 @@ struct SpecGen {
                     cont = dst;
                     break;
                 }
-                if (dst <= i || dst >= e) {
-                    fail = true;
+                // to e itself, where no region ends (the end of a stretch written as an if, or of the program): the rest of it skipped
+                if (dst <= i || dst > e || (dst == e && region_end(e))) {
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 if (I.op == OP_JMPU && decided(I)) {
@@ -1493,8 +1548,19 @@ struct SpecGen {
                     break;
                 }
                 // JMPU jumps on its bool being set, or with the low bit of num on its being clear
+                const std::string jumps = I.op == OP_JMPC ? w.cond(I) : (num & 1) ? "!(" + open_bool(I) + ")" : open_bool(I);
                 const Emit before = now();
-                w.o += "    if (" + (I.op == OP_JMPC ? w.cond(I) : (num & 1) ? "!(" + open_bool(I) + ")" : open_bool(I)) + ") {\n";
+                // Over a stretch that nests (nests()): the stretch when the jump isn't taken, then the code from dst once. Writing the rest
+                // on both ways, as below, doubles it at each such jump after another, until the program is past what a shader can be.
+                if (nests(i + 1, dst)) {
+                    w.o += "    if (!(" + jumps + ")) {\n";
+                    const bool r = block(i + 1, dst, in_loop, inc);
+                    w.o += "    }\n";
+                    join(before, true, now(), r);
+                    cont = dst;
+                    break;
+                }
+                w.o += "    if (" + jumps + ") {\n";
                 const bool r1 = block(dst, e, in_loop, inc);
                 const Emit jumped = now();
                 set(before);
@@ -1508,13 +1574,13 @@ struct SpecGen {
             case OP_CALLC:
             case OP_CALLU: {
                 if (num == 0 || dst + num == i + 1 || dst + num > n || calls >= 3 || !ends_plain(dst, dst + num)) {
-                    fail = true;
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 if (I.op == OP_CALLU && decided(I) && !((b >> I.bid) & 1)) break;
                 const bool dyn = I.op == OP_CALLC || (I.op == OP_CALLU && !decided(I));
                 if (!enter(dst + num)) {
-                    fail = true;
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 const Emit before = now();
@@ -1527,23 +1593,24 @@ struct SpecGen {
                     w.o += "    }\n";
                     join(now(), returns, before, true);
                 }
-                if (cont == e) {  // shader_run would not pop the enclosing region on the return
-                    fail = true;
+                if (cont == e && region_end(e)) {  // shader_run would not pop the enclosing region on the return
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 break;
             }
             case OP_IFU:
             case OP_IFC: {
-                if (dst < i + 1 || dst + num > e || ifs >= 7 || !ends_plain(i + 1, dst) || !ends_plain(dst, dst + num)) {
-                    fail = true;
+                // ifs: the PICA's if stack holds 8 (shader_run's ifs[8]); Ocarina of Time 3D's vertex programs nest all 8
+                if (dst < i + 1 || dst + num > e || ifs >= 8 || !ends_plain(i + 1, dst) || !ends_plain(dst, dst + num)) {
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 cont = dst + num;
                 const bool known = I.op == OP_IFU && decided(I);
                 const bool taken = !known || ((b >> I.bid) & 1);
                 if (taken && !enter(dst)) {  // the true branch is a region ending at dst
-                    fail = true;
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 ifs++;
@@ -1568,26 +1635,26 @@ struct SpecGen {
                 }
                 if (taken) ends.pop_back();
                 ifs--;
-                if (cont == e && cont != i + 1) {
-                    fail = true;
+                if (cont == e && cont != i + 1 && region_end(e)) {
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 break;
             }
             case OP_LOOP: {
                 if (dst < i + 1 || dst + 1 > e || loops >= 3 || !(plain(P->ins[dst]) || P->ins[dst].op == OP_BREAKC)) {
-                    fail = true;
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 if (!enter(dst + 1)) {
-                    fail = true;
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 if (gs && emits_in(i + 1, dst + 1)) {
                     const bool made = emitting_loop(I, i + 1, dst + 1);
                     ends.pop_back();
                     cont = dst + 1;
-                    if (!made || cont == e) {
+                    if (!made || (cont == e && region_end(e))) {
                         fail = true;
                         return false;
                     }
@@ -1617,8 +1684,8 @@ struct SpecGen {
                 es.temps = before.temps;
                 es.flags = before.flags;
                 cont = dst + 1;
-                if (cont == e) {
-                    fail = true;
+                if (cont == e && region_end(e)) {
+                    fail = true; why = __LINE__; at = i;
                     return false;
                 }
                 break;
@@ -1702,6 +1769,9 @@ static std::string glsl_text(std::string s, bool gs) {
 }
 
 // The body of main() for GLSL (port/wiiu/shadergen.cpp declares the registers and helpers).
+int shader_glsl_fail_line;  // why the last shader_glsl_spec gave up: the line in this file, and the instruction
+u32 shader_glsl_fail_at;
+
 std::string shader_glsl_spec(const ShaderProgram *P, u32 entry, u32 b, const u8 (*iu)[4], u32 *inputs, u32 open) {
     const u32 n = (u32)P->ins.size();
     if (entry >= n) return "";
@@ -1710,7 +1780,11 @@ std::string shader_glsl_spec(const ShaderProgram *P, u32 entry, u32 b, const u8 
     w.al = "aL";
     SpecGen g{w, P, n, b, iu, open};
     g.block(entry, n, false, 0);
-    if (g.fail) return "";
+    if (g.fail) {
+        shader_glsl_fail_line = g.why;
+        shader_glsl_fail_at = g.at;
+        return "";
+    }
     return glsl_text(w.o, false);
 }
 

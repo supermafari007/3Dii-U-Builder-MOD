@@ -35,6 +35,8 @@ static void send_parameter(Parameter p) {
     apt.param_ev->signal();
 }
 
+void miiverse_open_wiiu();
+
 // Library applets run as HLE: they answer the capture-buffer request and finish at once.
 static void applet_receive(u32 id, u32 signal, u32 ptr, u32 size) {
     if (signal == 2) {  // Request: wants a shared memory block for the screen capture
@@ -198,7 +200,11 @@ static void applet_run(u32 id, std::vector<u8> buf, ObjPtr mem = nullptr) {
     } else if (kind == 0x01) {
         if (!swkbd_run(id, buf, mem)) return;
     } else {
-        LOG("[apt] library applet %x: finishing immediately\n", id);
+        if (id == 0x407 || id == 0x112) {  // Miiverse applet -> Wii U Pretendo Juxtaposition
+        LOG("[apt] Miiverse applet %x: opening Pretendo Juxtaposition\n", id);
+        miiverse_open_wiiu();
+    }
+    LOG("[apt] library applet %x: finishing immediately\n", id);
     }
     send_parameter({id, 0x300, 10, nullptr, std::move(buf)});  // WakeupByExit
 }

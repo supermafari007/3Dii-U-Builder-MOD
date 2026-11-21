@@ -14,6 +14,7 @@ with addresses of module symbols (static.crs imports).
 """
 import os
 import struct
+import zlib
 
 # the Wii U's flat guest block ends at 0x20000000, so its builds choose a slot range inside it
 CRO_BASE = int(os.environ.get('RECOMP_CRO_BASE', '0x40000000'), 16)
@@ -102,10 +103,13 @@ class CroSet:
         self.crs = None
         self.mods = []
         for p in sorted(files):
+            raw = files[p]
+            if p.endswith('.cro.p') and raw[:4] == b'NDCF':
+                raw = zlib.decompress(raw[16:])
             if p.endswith('.crs'):
-                self.crs = Module(p, files[p])
-            elif p.endswith('.cro'):
-                self.mods.append(Module(p, files[p]))
+                self.crs = Module(p, raw)
+            elif p.endswith('.cro') or p.endswith('.cro.p'):
+                self.mods.append(Module(p, raw))
         self.mods.sort(key=lambda m: m.name)
         a = CRO_BASE
         for m in self.mods:
@@ -218,7 +222,7 @@ def load(gamedir):
     path = os.path.join(gamedir, 'romfs.bin')
     if not os.path.exists(path):
         return None
-    want = lambda n: n.endswith('.cro') or n.endswith('.crs')
+    want = lambda n: n.endswith('.cro') or n.endswith('.cro.p') or n.endswith('.crs')
     files = romfs_files(path, want)
     # An update's RomFS, which the game reads first: its modules replace the base's. Bowser's Inside Story's v2.2 ships only a new static.crs, the
     # table of where the updated code's functions are; read from the base, every module call into the updated code missed (2026-11-08).

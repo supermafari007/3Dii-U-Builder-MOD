@@ -88,9 +88,9 @@ def cover(product, folder):
 
 
 TDB = 'https://www.gametdb.com/3dstdb.zip'
-# where a game was sold, by the product code's last letter, as the Virtual Console's screens name it ("Released in Europe: 2007")
-PLACES = {'E': 'North America', 'P': 'Europe', 'J': 'Japan', 'K': 'Korea', 'U': 'Australia', 'D': 'Germany', 'F': 'France', 'I': 'Italy', 'S': 'Spain',
-          'W': 'Taiwan', 'C': 'China'}
+# where a game was sold, by the product code's last letter, as the Virtual Console's screens name it ("Lanzado en Europa: 2007")
+PLACES = {'E': 'América', 'P': 'Europa', 'J': 'Japón', 'K': 'Corea', 'U': 'Australia', 'D': 'Alemania', 'F': 'Francia', 'I': 'Italia', 'S': 'España',
+          'W': 'Taiwán', 'C': 'China'}
 
 
 def tdb_entries(code, folder, url=TDB):
@@ -219,4 +219,4 @@ def steamgriddb(name, key, folder, title_id, base=SGDB, also=None):
 
 def is_case_scan(path, folder):
     """whether path is a GameTDB cover that cover() fetched into folder, not a picture the user picked or SteamGridDB's"""
-    return os.path.dirname(os.path.abspath(path)) == os.path.abspath(folder) and not os.path.basename(path).startswith('sgdb_')
+    return bool(path and folder) and os.path.dirname(os.path.abspath(path)) == os.path.abspath(folder) and not os.path.basename(path).startswith('sgdb_')

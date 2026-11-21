@@ -20,6 +20,12 @@ DspState dsp;
 static void dsp_interrupt() {  // (kernel lock held) the frame is there for the game
     static int n;
     if (n++ == 100) VLOG("[dsp] tick: pipe event %s\n", dsp.pipe_irq[2] ? dsp.pipe_irq[2]->name.c_str() : "none");
+    // The interrupt only after a frame that worked on one the game submitted since the last interrupt, as on a 3DS, where the game submits
+    // right after each interrupt, well before the next frame. Here a frame can come while the game is still at work on the last one: an
+    // interrupt then stays pending, the game reads the status as soon as it has submitted, before any frame has worked on that submission,
+    // and gets a status two frames old from the region it reads next. Luigi's Mansion: Dark Moon's stream took that old "stopped, no
+    // buffer" for news, marked buffers still playing done and queued them again, and its voice lists became loops (the game then hung).
+    // Sound goes on all the same: only the interrupt waits for the game, and its next submission comes within a frame.
     if (dsp.pipe_irq[2]) dsp.pipe_irq[2]->signal();
     schedule_async();
 }
@@ -28,21 +34,33 @@ void dsp_tick() {
     // The sound doesn't wait for the kernel lock (lock_soon): a call of the game's can hold it for longer than there is sound queued, and one did
     // in Kid Icarus's loading screens (2026-11-11). A frame made without the lock is one the game hasn't come for, and an interrupt that
     // couldn't go to the game goes with the next frame that has the lock.
-    bool seen = false;
+    bool seen = false, waiting = false;
     Lock lk(kmutex, std::defer_lock);
     if (lock_soon(lk)) {
-        if (dsp.owed) dsp_interrupt();
-        dsp.owed = false;
-        // A frame the game hasn't come for (it isn't waiting on the pipe's event yet) is played all the same, but kept from the game: see
-        // generate_frame. Waiting for the game instead stopped the sound whenever its sound thread was late, by a file read or a busy frame:
-        // gaps of 5 ms about once a second in NSMB2 (2026-11-10). The limit is for a game that polls for a later frame instead of waiting.
-        auto &ev = dsp.pipe_irq[2];
-        seen = !(ev && ev->waiters.empty() && dsp.game_waits && ++dsp.held < 100);
-        if (seen) dsp.held = 0;
-        if (ev && !ev->waiters.empty()) dsp.game_waits = true;
+        if (dsp.owed) {
+            dsp_interrupt();
+            dsp.owed = false;
+        } else {
+            // A frame the game hasn't come for (it isn't waiting on the pipe's event yet) is played all the same, but kept from the game: see
+            // generate_frame. Waiting for the game instead stopped the sound whenever its sound thread was late, by a file read or a busy frame:
+            // gaps of 5 ms about once a second in NSMB2 (2026-11-10). The limit is for a game that polls for a later frame instead of waiting.
+            auto &ev = dsp.pipe_irq[2];
+            waiting = ev && !ev->waiters.empty();
+            if (waiting) {
+                dsp.game_waits = true;
+                dsp.held = 0;
+                seen = true;
+            } else if (ev && !dsp.game_waits && ++dsp.held >= 20) {
+                seen = true;
+            } else if (!ev) {
+                seen = true;
+            }
+        }
         lk.unlock();
     }
-    if (!audio::tick(seen) || !seen) return;
+    bool fresh = true;
+    if (!audio::tick(seen, &fresh, waiting)) return;
+    if (!fresh) return;  // never wake the game unless wr.source_status was actually published for this frame
     if (lock_soon(lk)) dsp_interrupt();
     else dsp.owed = true;
 }
@@ -112,7 +130,14 @@ struct Dsp : Service {
             u32 irq = ipc[1], ch = ipc[2];
             auto ev = get<Event>(ipc[4]);
             VLOG("[dsp] RegisterInterruptEvents irq=%u ch=%u ev=%p\n", irq, ch, (void *)ev.get());
-            if (irq == 2 && ch < 4) dsp.pipe_irq[ch] = ev;
+            if (irq == 2 && ch < 4) {
+                dsp.pipe_irq[ch] = ev;
+                if (ch == 2) {
+                    dsp.game_waits = false;
+                    dsp.held = 0;
+                    dsp.owed = false;
+                }
+            }
             else if (irq < 2) dsp.other_irq[irq] = ev;
             ipc.ok();
             break;

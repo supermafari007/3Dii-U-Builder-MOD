@@ -13,6 +13,7 @@ struct GameInfo {
     int priority = 0x30;
     u32 system_mode = 0, app_memory = 0x04000000;  // the memory mode its header asks for, and the application memory that mode gives
     int region = -1;  // from the SMDH region lockout: 0 JPN, 1 USA, 2 EUR, 3 AUS, 4 CHN, 5 KOR, 6 TWN; -1 region free
+    u32 regions = 0;  // all of its region lockout bits, as region numbers them (cfg.cpp tells the game one of them)
 };
 extern GameInfo g_game;
 

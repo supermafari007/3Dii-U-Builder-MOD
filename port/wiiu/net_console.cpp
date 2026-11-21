@@ -423,6 +423,12 @@ bool test_run() { return in_test; }
 bool debug_flag(const char *name) {
     if (test_flags.find(name) != std::string::npos) return true;
     FILE *f = fopen((data_dir() + "/" + name).c_str(), "rb");
+    if (f) {
+        fclose(f);
+        return true;
+    }
+    if (strcmp(name, "noglslcompile")) return false;
+    f = fopen("fs:/vol/content/noglslcompile", "rb");
     if (f) fclose(f);
     return f != nullptr;
 }

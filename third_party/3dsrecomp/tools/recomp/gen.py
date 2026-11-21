@@ -61,6 +61,12 @@ class Analyzer:
         return i
 
     def fixup_thumb(self, i, hw):
+        # RVCT's Thumb switch through a helper: a `blx` to it with the case table right after the call. The helper jumps to the case,
+        # so this is a jump through a table, and the table's bytes aren't code (switch8).
+        if i.kind == CALL and not i.target & 1:
+            ri = self.switch8_index(i.target)
+            if ri is not None:
+                self.switch8(i, ri)
         # `pop {..., rX}` then `bx rX`: Thumb's return through the popped lr (Thumb-1 code cannot pop pc and switch to
         # ARM). Returning is right for any `bx` (a caller whose return site does not match returns too, until the
         # dispatcher continues at pc); here it is the common case, and much cheaper than dispatching.
@@ -92,6 +98,40 @@ class Analyzer:
                     break
                 if (p & 7) == rx and (p >> 11) not in (0x1D, 0x1E, 0x1F) and (p & 0xF800) != 0x6000 and (p & 0xF800) != 0x9000:
                     break  # (rough) another 16-bit instruction writing rX: give up
+
+    def switch8_index(self, t):
+        """The index register of RVCT's Thumb switch helper (__ARM_common_switch8_thumb) if the ARM code at t is one, else None:
+            ldrb ip, [lr, #-1]; cmp rI, ip; ldrbhs rI, [lr, ip]; ldrblo rI, [lr, rI]; add ip, lr, rI, lsl #1; bx ip"""
+        w = [self.img.read32(t + 4 * k) for k in range(6)]
+        if None in w or w[0] != 0xE55EC001:
+            return None
+        ri = (w[1] >> 16) & 15
+        want = [0xE150000C | ri << 16, 0x27DE000C | ri << 12, 0x37DE0000 | ri << 12 | ri, 0xE08EC080 | ri, 0xE12FFF1C]
+        return ri if ri < 12 and w[1:] == want else None
+
+    def switch8(self, i, ri):
+        """A `blx` to RVCT's Thumb switch helper, as the jump the helper makes. The table at the return address holds the count n, then
+        n + 1 byte offsets in halfwords from lr (the table's second byte, with the Thumb bit); an index of n or more takes the last.
+        The helper leaves the offset in rI, the target in ip and lr as the call set it, and its compare sets the flags."""
+        img = self.img
+        tab = i.link
+        s = img.seg_of(tab)
+        if s is None:
+            return
+        n = s.data[tab - s.addr]
+        offs = s.data[tab + 1 - s.addr:tab + 2 + n - s.addr]
+        lr = tab | 1
+        targets = sorted({lr + 2 * o for o in offs})
+        if len(offs) != n + 1 or not all(img.in_text(t & ~1) for t in targets):
+            return
+        i.kind = JMP
+        i.jt = targets
+        i.target = i.link = None
+        cmp, _ = arm.dp_core(10, 1, 'a', 'b', None)
+        base = arm.hx(lr)
+        i.code = [f'{{ u32 a = r{ri}; u32 b = {n}u; {" ".join(cmp)} r{ri} = RD8({base} + (a < b ? a : b)); r12 = {base} + (r{ri} << 1); '
+                  f'r14 = {base}; tpc = r12; }}']
+        i.note = 'switch through %d cases' % n
 
     def fixup_arm(self, i):
         img = self.img
@@ -219,37 +259,51 @@ class Analyzer:
             return None
         if h[0] not in (0x1800 | rx << 6 | rx << 3 | rx, 0x0040 | rx << 3 | rx):  # adds rX, rX, rX / lsls rX, rX, #1
             return None
-        if (h[1] & 0xF83F) == (0x7800 | rx << 3 | rx):
-            size, k = 1, (h[1] >> 6) & 31
-        elif (h[1] & 0xF83F) == (0x8800 | rx << 3 | rx):
-            size, k = 2, ((h[1] >> 6) & 31) * 2
-        else:
-            return None
-        if h[2] != (0x4478 | rx):  # add rX, pc
-            return None
-        if size == 1 and (h[3] & 0xFFC7) == rx:  # movs rX, rI
-            ri = (h[3] >> 3) & 7
-        elif size == 2 and (h[3] & 0xFFC7) == (0x0040 | rx):  # lsls rX, rI, #1
-            ri = (h[3] >> 3) & 7
+        if (h[1] & 0xF83F) == (0x7800 | rx << 3 | rx) and h[2] == (0x4478 | rx):  # ldrb rX, [rX, #k] ; add rX, pc
+            size, tbase = 1, a - 2 + ((h[1] >> 6) & 31)
+            if (h[3] & 0xFFC7) == rx:  # movs rX, rI
+                ri, back_start = (h[3] >> 3) & 7, 5
+            else:
+                ri, back_start = rx, 4
+        elif (h[1] & 0xF83F) == (0x8800 | rx << 3 | rx) and h[2] == (0x4478 | rx):  # ldrh rX, [rX, #k] ; add rX, pc
+            size, tbase = 2, a - 2 + ((h[1] >> 6) & 31) * 2
+            if (h[3] & 0xFFC7) == (0x0040 | rx):  # lsls rX, rI, #1
+                ri, back_start = (h[3] >> 3) & 7, 5
+            else:
+                return None
+        elif (h[1] & 0xFE3F) == (0x5C00 | rx << 3 | rx) and (h[2] & 0xFF00) == (0xA000 | rx << 8):  # adr rX, #imm ; ldrb rX, [rX, rI]
+            size = 1
+            ri = (h[1] >> 6) & 7
+            tbase = ((a - 6 + 4) & ~3) + (h[2] & 0xFF) * 4
+            back_start = 4
+        elif (h[1] & 0xFE3F) == (0x5A00 | rx << 3 | rx) and (h[2] & 0xFF00) == (0xA000 | rx << 8):  # adr rX, #imm ; ldrh rX, [rX, rI]
+            size = 2
+            ri = (h[1] >> 6) & 7
+            if (h[3] & 0xFFC7) == (0x0040 | ri):  # lsls rI, rI, #1
+                ri, back_start = (h[3] >> 3) & 7, 5
+            else:
+                back_start = 4
+            tbase = ((a - 6 + 4) & ~3) + (h[2] & 0xFF) * 4
         else:
             return None
         n = None
-        for back in range(5, 14):
+        for back in range(back_start, 16):
             p = img.read16(a - 2 * back)
             if p is None:
                 break
             if (p & 0xFF00) == (0x2800 | ri << 8):  # cmp rI, #n
-                q = img.read16(a - 2 * back + 2)
-                # the bhs/bcs to the default case (possibly a few instructions later)
-                for f in range(a - 2 * back + 2, a - 8, 2):
+                # the bhs/bcs (or bcc+b / bhi / bgt) to the default case (possibly a few instructions later)
+                for f in range(a - 2 * back + 2, a - 4, 2):
                     q = img.read16(f)
-                    if q is not None and (q & 0xFF00) == 0xD200:
+                    if q is not None and (q & 0xFF00) in (0xD200, 0xD300):
                         n = p & 0xFF
+                        break
+                    if q is not None and (q & 0xFF00) in (0xD800, 0xDC00):
+                        n = (p & 0xFF) + 1
                         break
                 break
         if not n:
             return None
-        tbase = a - 2 + k  # rX = idx + (address of `add rX, pc`) + 4
         targets = []
         for idx in range(n):
             if size == 1:

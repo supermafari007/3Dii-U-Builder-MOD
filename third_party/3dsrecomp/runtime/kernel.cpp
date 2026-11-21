@@ -228,6 +228,22 @@ static void make_ready(Thread *t, bool front = false) {
     t->ready_seq = front ? 0 : ready_counter++;
 }
 
+#ifdef __WIIU__
+static void thread_wake(Thread *t) {
+    if (t->host_event) OSSignalEvent((OSEvent *)t->host_event);
+}
+static void thread_wait(Thread *t, Lock &lk) {
+    while (running != t) {
+        lk.unlock();
+        OSWaitEvent((OSEvent *)t->host_event);
+        lk.lock();
+    }
+}
+#else
+static void thread_wake(Thread *t) { t->cv.notify_one(); }
+static void thread_wait(Thread *t, Lock &lk) { t->cv.wait(lk, [&] { return running == t; }); }
+#endif
+
 // Gives the CPU to the best ready thread and, if that is not `cur`, waits until `cur` runs again.
 static void switch_from(Thread *cur, Lock &lk) {
     flush_deferred();
@@ -235,11 +251,11 @@ static void switch_from(Thread *cur, Lock &lk) {
     running = next;
     if (next) {
         next->status = TStatus::Running;
-        if (next != cur) next->cv.notify_one();
+        if (next != cur) thread_wake(next);
     }
     if (next == cur) return;
     kstats.switches++;
-    cur->cv.wait(lk, [&] { return running == cur; });
+    thread_wait(cur, lk);
 }
 
 void resume_thread(Thread *t) {
@@ -285,7 +301,7 @@ void schedule_async() {
     running = next;
     next->status = TStatus::Running;
     kstats.wakes++;
-    next->cv.notify_one();
+    thread_wake(next);
 }
 
 void reschedule(Lock &lk) {
@@ -327,14 +343,14 @@ void run_blocked(Lock &lk, const std::function<void()> &work) {
     running = best_ready();
     if (running) {
         running->status = TStatus::Running;
-        running->cv.notify_one();
+        thread_wake(running);
     }
     lk.unlock();
     work();
     lk.lock();
     make_ready(cur, true);
     schedule_async();  // takes the CPU if it's free, and asks a thread of lower priority for it otherwise
-    cur->cv.wait(lk, [&] { return running == cur; });
+    thread_wait(cur, lk);
 }
 
 // ---------------------------------------------------------------- wait objects
@@ -422,20 +438,33 @@ static void thread_exit_locked(Thread *t, Lock &lk);
 
 #ifdef __WIIU__
 static OSThread *guest_hosts[64];
+static Thread *guest_ptrs[64];
 void *guest_host_thread(u32 i) { return i < 64 ? guest_hosts[i] : nullptr; }
+bool guest_thread_regs(u32 i, u32 *status, u32 *pc, u32 *lr) {
+    if (i >= 64) return false;
+    Thread *t = guest_ptrs[i];
+    if (!t || t->status == TStatus::Dead) return false;
+    *status = (u32)t->status;
+    *pc = t->cpu.pc;
+    *lr = t->cpu.r[14];
+    return true;
+}
 #endif
 
 static void *thread_main(void *arg) {
     Thread *t = (Thread *)arg;
 #ifdef __WIIU__
     OSSetThreadSpecific(OS_THREAD_SPECIFIC_0, t);
-    guest_hosts[t->id % 64] = OSGetCurrentThread();
+    if (t->host_slot < 64) {
+        guest_ptrs[t->host_slot] = t;
+        guest_hosts[t->host_slot] = OSGetCurrentThread();
+    }
 #else
     tls_thread = t;
 #endif
     {
         Lock lk(kmutex);
-        t->cv.wait(lk, [&] { return running == t; });
+        thread_wait(t, lk);
     }
     run_guest(&t->cpu);
     Lock lk(kmutex);
@@ -448,9 +477,10 @@ static void *thread_main(void *arg) {
 // Core 1 has the 2 MB of L2, and the GPU thread needs core 2 to itself.
 struct GuestHost {
     OSThread os;
+    OSEvent event;
+    char name[16];
     alignas(16) u8 stack[2 << 20];
 };
-static char guest_names[64][12];
 
 static int guest_entry(int, void *t) {
     thread_main(t);
@@ -460,11 +490,24 @@ static int guest_entry(int, void *t) {
 static void start_guest_host(Thread *t) {
     auto *host = (GuestHost *)mem::host_alloc(16, sizeof(GuestHost));
     if (!host) FATAL("no memory for a guest thread\n");
+    OSInitEvent(&host->event, FALSE, OS_EVENT_MODE_AUTO);
+    t->host_event = &host->event;
+    u32 slot = 64;
+    for (u32 i = 1; i < 64; i++) {
+        if (!guest_hosts[i]) {
+            slot = i;
+            break;
+        }
+    }
+    t->host_slot = slot;
+    if (slot < 64) {
+        guest_ptrs[slot] = t;
+        guest_hosts[slot] = &host->os;
+    }
     if (!OSCreateThread(&host->os, guest_entry, 0, t, host->stack + sizeof host->stack, sizeof host->stack, 16, (OSThreadAttributes)(OS_THREAD_ATTRIB_AFFINITY_CPU1 | OS_THREAD_ATTRIB_DETACHED)))
         FATAL("cannot create a guest thread\n");
-    char *name = guest_names[t->id % 64];
-    snprintf(name, sizeof guest_names[0], "guest %u", t->id);
-    OSSetThreadName(&host->os, name);
+    snprintf(host->name, sizeof host->name, "guest %u", t->id);
+    OSSetThreadName(&host->os, host->name);
     OSSetThreadDeallocator(&host->os, [](OSThread *th, void *) { mem::host_free(th); });
     OSSetThreadRunQuantum(&host->os, 1000);  // as wut's pthreads have
     OSResumeThread(&host->os);
@@ -472,6 +515,11 @@ static void start_guest_host(Thread *t) {
 #endif
 
 std::shared_ptr<Thread> create_thread(u32 entry, u32 arg, u32 stack_top, s32 prio, bool start) {
+    threads.erase(std::remove_if(threads.begin(), threads.end(),
+                                 [](const std::shared_ptr<Thread> &th) {
+                                     return th->status == TStatus::Dead && th.use_count() == 1;
+                                 }),
+                  threads.end());
     auto t = std::make_shared<Thread>();
     t->id = next_thread_id++;
     t->priority = prio;
@@ -503,7 +551,11 @@ std::shared_ptr<Thread> create_thread(u32 entry, u32 arg, u32 stack_top, s32 pri
 static void thread_exit_locked(Thread *t, Lock &lk) {
     t->status = TStatus::Dead;
 #ifdef __WIIU__
-    guest_hosts[t->id % 64] = nullptr;
+    if (t->host_slot < 64) {
+        guest_hosts[t->host_slot] = nullptr;
+        guest_ptrs[t->host_slot] = nullptr;
+    }
+    t->host_event = nullptr;
 #endif
     tls_used.erase((t->tls - mem::TLS_BASE) / mem::TLS_SLOT);
     t->wakeup_waiters();
@@ -518,10 +570,14 @@ static void thread_exit_locked(Thread *t, Lock &lk) {
     running = next;
     if (next) {
         next->status = TStatus::Running;
-        next->cv.notify_one();
+        thread_wake(next);
     }
     lk.unlock();
+#ifdef __WIIU__
+    OSExitThread(0);
+#else
     pthread_exit(nullptr);
+#endif
 }
 
 // ---------------------------------------------------------------- memory bookkeeping
@@ -642,7 +698,9 @@ static u32 svc_control_memory(CPU *c) {
             if (!a) return RES_OUT_OF_MEMORY;
         } else {
             a = addr0;
-            if (a < mem::HEAP_BASE || a + size > mem::STACK_TOP - 0x04000000) {
+            // a game in a larger memory mode (loader.cpp) can commit past the standard 64 MB heap
+            const u32 heap_end = mem::HEAP_BASE + std::max(0x04000000u, g_game.app_memory);
+            if (a < mem::HEAP_BASE || a > heap_end || size > heap_end - a) {
                 LOG("[svc] ControlMemory: bad heap address %08x\n", a);
                 return RES_INVALID_ADDRESS;
             }
@@ -1283,11 +1341,10 @@ void start(const BootInfo &bi) {
 #ifdef __WIIU__
     OSInitEvent(&tq_event, FALSE, OS_EVENT_MODE_AUTO);
     tq_event_ready = true;
-    // From a megabyte clear of the program (its data and bss come last) to the heap. A game with modules has ldr:ro put them where it says,
-    // anywhere in the code's region, which ends at 0x04000000: only what is past that is lent then. Pokemon Ultra Sun's field modules
-    // landed on the host's threads, and the game froze as it loaded its first route (2026-11-13).
+    // From 0x04000000 (past the code/CRO/CRS region) to the heap. A game with ldr:ro (even just a static .crs module without .cro files,
+    // like Mario Party: The Top 100 at 0x00842000) maps its modules below 0x04000000, while 0x04000000..0x08000000 still gives the host 64 MB.
     const u32 clear = ((g_game.data_addr + g_game.data_size + g_game.bss_size + 0xFFFFF) & ~0xFFFFFu) + 0x100000;
-    mem::lend(ro_has_modules() ? std::max(clear, 0x04000000u) : clear, mem::HEAP_BASE);
+    mem::lend(std::max(clear, 0x04000000u), mem::HEAP_BASE);
 #endif
     tq.th = std::thread(timeout_thread);
     tq.th.detach();

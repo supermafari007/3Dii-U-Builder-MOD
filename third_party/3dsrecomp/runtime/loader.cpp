@@ -120,14 +120,12 @@ std::vector<u32> smdh_icon(const std::string &path) {
     return px;
 }
 
-// The region a game is for, from its SMDH region lockout bits (the lowest one: EUR for EUR+AUS); -1 if region free.
-static int smdh_region(const std::string &path) {
+// The regions a game is for: its SMDH region lockout bits (0 JPN ... 6 TWN), 0 if it has none.
+static u32 smdh_regions(const std::string &path) {
     std::ifstream f(path, std::ios::binary);
     std::vector<u8> d((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
-    if (d.size() < 0x2040 || memcmp(d.data(), "SMDH", 4) != 0) return -1;
-    u32 bits = d[0x2018] | d[0x2019] << 8 | d[0x201A] << 16 | (u32)d[0x201B] << 24;
-    if ((bits & 0x7F) == 0 || (bits & 0x7F) == 0x7F) return -1;
-    return __builtin_ctz(bits & 0x7F);
+    if (d.size() < 0x2040 || memcmp(d.data(), "SMDH", 4) != 0) return 0;
+    return (d[0x2018] | d[0x2019] << 8 | d[0x201A] << 16 | (u32)d[0x201B] << 24) & 0x7F;
 }
 
 void load_game(const std::string &dir) {
@@ -138,7 +136,8 @@ void load_game(const std::string &dir) {
     g_game.title = std::string((const char *)&ex[0], strnlen((const char *)&ex[0], 8));
     g_game.name = smdh_title(dir + EXEFS_PREFIX "icon.bin");
     if (g_game.name.empty()) g_game.name = g_game.title;
-    g_game.region = smdh_region(dir + EXEFS_PREFIX "icon.bin");
+    g_game.regions = smdh_regions(dir + EXEFS_PREFIX "icon.bin");
+    g_game.region = g_game.regions && g_game.regions != 0x7F ? __builtin_ctz(g_game.regions) : -1;  // the first (EUR for EUR+AUS)
     g_game.text_addr = rd(0x10);
     g_game.text_size = rd(0x18);
     g_game.ro_addr = rd(0x20);

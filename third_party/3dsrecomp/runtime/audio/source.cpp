@@ -59,6 +59,7 @@ void SourceFilters::process(StereoFrame &f) {
 // ---- source
 
 void Source::enqueue(const Buffer &b) {
+    if (g_verbose >= 3) rt_log("[dsp] src %p queue id=%u paddr=%08x len=%u fmt=%d ch=%u%s enabled=%d\n", (void *)this, b.id, b.paddr, b.length, (int)b.format, b.channels, b.from_queue ? " (queue)" : " (embedded)", (int)st.enabled);
     // Lower buffer ids play first; equal ids keep their insertion order.
     auto it = std::upper_bound(st.queue.begin(), st.queue.end(), b.id,
                                [](u16 id, const Buffer &x) { return id < x.id; });
@@ -165,6 +166,7 @@ bool Source::dequeue() {
     if (st.queue.empty()) return false;
     Buffer b = st.queue.front();
     st.queue.erase(st.queue.begin());
+    if (g_verbose >= 3) rt_log("[dsp] src %p play id=%u\n", (void *)this, b.id);
 
     if (b.adpcm_dirty) {
         st.adpcm.yn1 = (s16)b.adpcm_yn[0];
@@ -237,12 +239,14 @@ size_t Source::fetch(Sample *out, size_t max) {
     return max;
 }
 
-void Source::generate() {
+void Source::generate(bool publish) {
     frame.fill({});
 
     if (!st.have_buffer) {
         if (dequeue()) return;
+        if (!publish || st.update_unpublished) return;
         // Nothing left to play: the source turns itself off.
+        if (g_verbose >= 3) rt_log("[dsp] src %p empty after id=%u: off\n", (void *)this, st.current_buffer_id);
         st.enabled = false;
         st.buffer_update = true;
         st.last_buffer_id = st.current_buffer_id;
@@ -278,14 +282,20 @@ void Source::generate() {
     st.filters.process(frame);
 }
 
-SourceStatus Source::tick(SourceConfig &cfg, const s16 coeffs[16], bool seen) {
+SourceStatus Source::tick(SourceConfig &cfg, const s16 coeffs[16], bool seen, bool publish) {
     if (seen) parse_config(cfg, coeffs);
-    if (st.enabled) generate();
+    if (st.enabled) generate(publish);
 
     SourceStatus s;
     s.is_enabled = st.enabled;
-    s.current_buffer_id_dirty = st.buffer_update ? 1 : 0;
-    if (seen) st.buffer_update = false;
+    // A buffer change is reported in the next status the game is given, however many frames that takes. The game only acts on a
+    // status whose "current buffer changed" flag is set: a change lost in a frame it never saw left Luigi's Mansion: Dark Moon, on a
+    // stream that ran dry, with the voice off and its last buffers never finished, which it then queued again while they were still
+    // in its list (a loop it walked forever).
+    st.update_unpublished |= st.buffer_update;
+    st.buffer_update = false;
+    s.current_buffer_id_dirty = st.update_unpublished ? 1 : 0;
+    if (publish) st.update_unpublished = false;
     s.sync_count = st.sync_count;
     s.buffer_position.set(st.pos);
     s.current_buffer_id = st.current_buffer_id;
