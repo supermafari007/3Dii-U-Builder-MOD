@@ -268,7 +268,8 @@ def main():
     ap.add_argument('--art-style', choices=('picture', 'console'), default='console',
                     help='the start-up screens: laid out as the Virtual Console shows a game, or --art as it is')
     ap.add_argument('--tdb', help="a folder for GameTDB's list of 3DS games, where the Virtual Console's screens find the year a game came out")
-    ap.add_argument('--mixed', action='store_true', help='trial: fast code with only the video decoder in safe mode (build3ds.Game.mixed)')
+    ap.add_argument('--mixed', action='store_true', help='trial: fast code with only the video decoder in safe mode (build3ds.Game.mixed); a game '
+                                                         'compat.json marks "mixed" uses this policy for base code; updates/code mods require --mixed')
     ap.add_argument('--mk7-online', action='store_true', help='exclusive Mario Kart 7 Pretendo 3DS online mode with unique Friend Code per build')
     ap.add_argument('--cold', action='store_true', help="for the checks: build it as a game nobody has built before, with none of this PC's lists of "
                                                         'its code and shaders (tools/check_ports.py --cold)')
@@ -311,7 +312,9 @@ def main():
         fail(str(e))
     update = next((d for d in extras if d.kind == 'update'), None)
     dlc = next((d for d in extras if d.kind == 'dlc'), None)
-    known = None if a.cold else profile_for(game)
+    profile = profile_for(game)
+    known = None if a.cold else profile
+    code_mods = any(m.changes_code() for m in mod_list)
     info = dict(known or derived(game))
     if a.name and a.name.strip():
         info['name'] = ' '.join(a.name.split())
@@ -376,12 +379,12 @@ def main():
     # what earlier runs of a game learned (render states it uses; code only static analysis misses) goes with it, if the code is the same.
     # An untested game's live under its own slug (games/g_<code>/shader_logs): a run's shader_misses.bin put there is compiled ahead next time.
     logs = os.path.join(ROOT, 'games', (known or derived(game))['slug'], 'shader_logs')
-    if os.path.isdir(logs) and not a.cold:
+    if os.path.isdir(logs) and not a.cold and not code_mods:
         os.makedirs(os.path.join(game_dir, 'shader_logs'), exist_ok=True)
         for f in os.listdir(logs):
             if not f.startswith('other_') and os.path.isfile(os.path.join(logs, f)):
                 shutil.copyfile(os.path.join(logs, f), os.path.join(game_dir, 'shader_logs', f))
-    for f in [] if a.cold else console_learned((known or derived(game))['slug']):
+    for f in [] if a.cold or code_mods else console_learned((known or derived(game))['slug']):
         os.makedirs(os.path.join(game_dir, 'shader_logs'), exist_ok=True)
         shutil.copyfile(f, os.path.join(game_dir, 'shader_logs', os.path.basename(f)))
 
@@ -405,12 +408,15 @@ def main():
     g = b3.Game(info['slug'], game_dir)  # the recipe every game gets, read from this game's own code (build3ds.py)
     if a.cold:
         g.twin = derived(game)['slug']  # its own folder in games/ is no other game's: nothing of it is borrowed
-    if a.mixed:
+    # Cold checks exclude learned data, while testing the same compiler policy as a normal build.
+    if a.mixed or (profile and profile.get('mixed') and not update and not code_mods):
         g.mixed()
     if g.mode == 'safe':
         print('hand-written code that keeps values in any register across its calls (Mobiclip\'s video decoder): every register goes through memory', flush=True)
-    if update:
-        g.upstream_functions = None  # the 3dsrecomp project's lists are of the base game's code, which the update replaces
+    if update or a.cold or code_mods:
+        g.upstream_functions = None  # learned base-code entries do not describe changed code or a cold build
+    if a.cold:
+        g.pipelines = None
     out = os.path.join(game_dir, 'out_measure' if b3.MEASURE else 'out')  # a measuring build apart from the one for a console
     g.out, g.rpx, g.nm, g.shaders = out, os.path.join(out, info['slug'] + '.rpx'), os.path.join(out, 'game.nm'), os.path.join(out, 'shaders')
     os.makedirs(out, exist_ok=True)
@@ -419,9 +425,11 @@ def main():
     # What earlier runs reached stays, and the finders add to it: a tested game's list (its base code's alone), or an untested game's own
     # games/g_<code>[_v<update>]/functions.txt, the entries its runs found missing (Kirby: Triple Deluxe's first call at 0x232670, 2026-11-08)
     learned = os.path.join(ROOT, 'games', known['slug'] if known else info['slug'], 'functions.txt')
-    if not (known and update) and os.path.isfile(learned):
+    have_learned = not a.cold and not code_mods and not (known and update) and os.path.isfile(learned) and os.path.getsize(learned) > 0
+    if have_learned:
         shutil.copyfile(learned, g.extra_functions)
-    if known and os.path.isfile(learned) and not update and not any(m.changes_code() for m in mod_list):
+    have_upstream = g.upstream_functions and os.path.isfile(g.upstream_functions) and os.path.getsize(g.upstream_functions) > 0
+    if known and not update and not code_mods and (have_learned or have_upstream):
         print('code entries: what this game\'s tested builds found', flush=True)
     else:
         env = dict(os.environ, RECOMP_CRO_BASE=b3.CRO_BASE)

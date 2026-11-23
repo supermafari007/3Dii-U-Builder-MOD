@@ -2,6 +2,7 @@
 // run as HLE, system applets such as the browser close as soon as they start).
 #include <deque>
 
+#include "../loader.h"
 #include "../service.h"
 #include "../swkbd.h"
 #include "services.h"
@@ -390,7 +391,7 @@ struct AptService : Service {
             break;
         }
         case 0x0101:  // CheckNew3DSApp
-        case 0x0102:  // CheckNew3DS
+        case 0x0102:  // CheckNew3DS: Old 3DS (Circle Pad Pro is emulated over ir:USER)
             ipc.ok(2);
             ipc.set(2, 0);
             break;

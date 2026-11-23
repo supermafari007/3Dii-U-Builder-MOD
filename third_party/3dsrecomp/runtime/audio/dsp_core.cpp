@@ -89,6 +89,8 @@ void initialize(Dsp &d) {
     memset(dsp_ram(), 0, kDspRamSize);
     d.mixer.reset();
     for (auto &s : d.sources) s.reset();
+    d.last_counter = 0;
+    d.fresh = true;
     reset_pipes(d);
 }
 
@@ -125,15 +127,12 @@ StereoFrame generate_frame(Dsp &d, bool seen, bool force_fresh) {
 
     // Has the game submitted a frame since the last one (or none yet)? Only such a frame's status goes to the game, with an interrupt
     // (services/dsp.cpp: dsp_tick), as on a 3DS, where every frame works on one the game submitted just before. A frame between two of
-    // its submissions only plays on: its status would go into the region the game may still be reading (it reads the one it doesn't
-    // submit next), and a status changing halfway through gave Luigi's Mansion: Dark Moon one channel of a stereo stream newer news
-    // than the other. The stream then queued a buffer again that was still in the second channel's list, and the game hung walking it.
-    // A frame the game doesn't take (seen) is never fresh, and leaves the game's submission to the frame it does take.
-    // When force_fresh is true, the game's sound thread is already asleep waiting on pipe_irq[2] (cannot be reading wr), so we MUST
-    // publish wr.source_status before waking it; otherwise it would wake and read a 2-frame-old stale status and loop its voice list.
+    // its submissions only plays on: waking nn::snd twice for the same frame_counter causes it to re-queue active wave buffers and hang
+    // walking a cyclic voice list. force_fresh is only set by dsp_tick after ~100 ms of genuine stall so games waiting without bumping
+    // frame_counter never deadlock idle.
     const u16 counter = frame_counter(ri);
     d.fresh = seen && (force_fresh || counter != d.last_counter || (frame_counter(0) == 0 && frame_counter(1) == 0));
-    if (seen) d.last_counter = counter;
+    if (d.fresh) d.last_counter = counter;
 
     std::array<QuadFrame, 3> mixes{};
     for (int i = 0; i < kNumSources; i++) {

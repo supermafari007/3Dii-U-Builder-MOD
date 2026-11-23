@@ -11,6 +11,7 @@
 
 #include "audio/host.h"
 #include "audio_iface.h"
+#include "audio_ring.h"
 
 namespace {
 constexpr u32 RING = 8192;     // samples per channel
@@ -19,10 +20,13 @@ s16 *ring[2];
 AXVoice *voice[2];
 u32 write_pos;
 bool playing;
+constexpr u32 FADE_LEN = 64;  // ~2 ms smooth ramp on start/recovery to prevent audible clicks/static
+u32 fade_pos = FADE_LEN;
 std::atomic<float> gain{1.0f};
 std::atomic<bool> silenced{false};
 
 void start_voices() {
+    fade_pos = 0;
     for (int c = 0; c < 2; c++) {
         AXVoiceBegin(voice[c]);
         AXSetVoiceState(voice[c], AX_VOICE_STATE_PLAYING);
@@ -121,7 +125,7 @@ void host_output(const Sample *samples, size_t n) {
     if (silenced.load(std::memory_order_acquire) || !voice[0] || !voice[1]) return;
     if (playing) {
         // keep a steady distance: on an underrun or a pile-up, jump to where the cushion should be
-        const u32 distance = (write_pos + RING - play_pos()) % RING;
+        const u32 distance = audio_ring::distance(write_pos, play_pos(), RING);
         if (distance < 160 || distance > RING / 2) {
             // what lies between the voices and the new place is old sound: silence, not a repeat of it
             for (int c = 0; c < 2; c++) {
@@ -129,13 +133,19 @@ void host_output(const Sample *samples, size_t n) {
                 DCFlushRange(ring[c], RING * 2);
             }
             write_pos = (play_pos() + CUSHION) % RING;
+            fade_pos = 0;
         }
     }
     const float g = gain;
     for (size_t i = 0; i < n; i++) {
         const u32 at = write_pos;
-        ring[0][at] = g == 1.0f ? samples[i][0] : (s16)(samples[i][0] * g);
-        ring[1][at] = g == 1.0f ? samples[i][1] : (s16)(samples[i][1] * g);
+        float scale = g;
+        if (fade_pos < FADE_LEN) {
+            scale *= (float)fade_pos / (float)FADE_LEN;
+            fade_pos++;
+        }
+        ring[0][at] = scale == 1.0f ? samples[i][0] : (s16)(samples[i][0] * scale);
+        ring[1][at] = scale == 1.0f ? samples[i][1] : (s16)(samples[i][1] * scale);
         write_pos = (write_pos + 1) % RING;
     }
     // the written span, which may wrap
@@ -150,6 +160,10 @@ void host_output(const Sample *samples, size_t n) {
     }
     if (!playing && write_pos >= CUSHION * 2) start_voices();
 }
-int host_queued() { return playing ? (int)((write_pos + RING - play_pos()) % RING) : -1; }
+int host_queued() {
+    if (!playing) return -1;
+    const u32 raw = audio_ring::distance(write_pos, play_pos(), RING);
+    return (int)audio_ring::queued(raw, RING);
+}
 }  // namespace hle
 }  // namespace audio

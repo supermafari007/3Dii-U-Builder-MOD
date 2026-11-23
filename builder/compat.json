@@ -1,5 +1,5 @@
 {
-  "_about": "Games tested on a real Wii U, by 3DS program id. title_id, name, product and slug keep the builds the same as the ones already installed; status and note are shown in the app: \"Complete\" for a game that is finished here, \"Plays\" for one that was tested and plays. Anything not listed builds as untested.",
+  "_about": "Games tested on a real Wii U, by 3DS program id. title_id, name, product and slug keep the builds the same as the ones already installed; status and note are shown in the app: \"Complete\" for a game that is finished here, \"Plays\" for one that was tested and plays. \"mixed\": true builds the game the way it was played, the fast code everywhere but its video decoder (build3ds.Game.mixed). Anything not listed builds as untested.",
   "_cemu": [
     {"name": "The Legend of Zelda: A Link Between Worlds", "status": "Cemu", "note": "57 fps. Incluye 142 shaders precompilados adicionales y corrección de parpadeo en la pantalla del GamePad."},
     {"name": "Metroid: Samus Returns", "status": "Cemu", "note": "30 fps. Corregida la desaparición momentánea de objetos en consola."},
@@ -7,7 +7,8 @@
     {"name": "Rhythm Heaven Megamix", "status": "Cemu", "note": "60 fps en Cemu. Pendiente de confirmación en consola."},
     {"name": "Phoenix Wright: Ace Attorney Trilogy", "status": "Cemu", "note": "54 fps. Compilación adaptada al cambio de pilas de sus hilos de script."},
     {"name": "Kid Icarus: Uprising", "status": "Cemu", "note": "30 fps; las escenas de vídeo se reproducen más lento."},
-    {"name": "Miitopia", "status": "Cemu", "note": "30 fps. Requiere los archivos del sistema de 3DS (datos de Mii). Incluye 331 shaders adicionales."}
+    {"name": "Miitopia", "status": "Cemu", "note": "30 fps. Requiere los archivos del sistema de 3DS (datos de Mii). Incluye 331 shaders adicionales."},
+    {"name": "The Legend of Zelda: Majora's Mask 3D", "status": "Cemu", "note": "30 fps en el juego, ~20 en la intro. Emula Circle Pad Pro (stick derecho = C-stick, ZL/ZR propios) para superar la pantalla inicial."}
   ],
   "000400000008C300": {"slug": "tomodachi", "title_id": "0005000010334467", "name": "Tomodachi Life", "product": "WUP-N-TMDF", "folder": "Tomodachi_Life",
                        "status": "Plays", "note": "Alrededor de 30 fps, igual que en 3DS. Guarda la partida en la consola."},
@@ -38,5 +39,17 @@
   "0004000000054000": {"slug": "g_aree", "title_id": "000500003D000540", "name": "SUPER MARIO 3D LAND", "product": "WUP-N-AREE", "folder": "SUPER_MARIO_3D_LAND",
                        "status": "Plays", "note": "Funciona en Wii U con shaders precompilados y estabilidad de audio/GPU mejorada."},
   "0004000000086300": {"slug": "g_egde", "title_id": "000500003D000863", "name": "Animal Crossing: New Leaf", "product": "WUP-N-EGDE", "folder": "Animal_Crossing_New_Leaf",
-                       "status": "Plays", "note": "Funciona en Wii U con su actualización. Las zonas muy pobladas van algo más lentas."}
+                       "status": "Plays", "note": "Funciona en Wii U con su actualización. Las zonas muy pobladas van algo más lentas."},
+  "0004000000033500": {"slug": "g_aqee", "title_id": "000500003D000335", "name": "The Legend of Zelda Ocarina of Time 3D", "product": "WUP-N-AQEE",
+                       "folder": "The_Legend_of_Zelda_Ocarina_of_Time_3D", "mixed": true,
+                       "status": "Plays", "note": "Funciona en Wii U en modo mixto (sin texturas verdes/marrones y mejor rendimiento)."},
+  "0004000000033600": {"slug": "g_aqep", "title_id": "000500003D000336", "name": "The Legend of Zelda Ocarina of Time 3D", "product": "WUP-N-AQEP",
+                       "folder": "The_Legend_of_Zelda_Ocarina_of_Time_3D", "mixed": true,
+                       "status": "Untested", "note": "Versión europea: compilada en modo mixto igual que la americana."},
+  "0004000000125500": {"slug": "g_ajre", "title_id": "000500003D001255", "name": "The Legend of Zelda Majora's Mask 3D", "product": "WUP-N-AJRE",
+                       "folder": "The_Legend_of_Zelda_Majora_s_Mask_3D", "mixed": true,
+                       "status": "Untested", "note": "Compilado en modo mixto con emulación Circle Pad Pro (stick derecho = C-stick, ZL/ZR propios)."},
+  "0004000000125600": {"slug": "g_ajrp", "title_id": "000500003D001256", "name": "The Legend of Zelda Majora's Mask 3D", "product": "WUP-N-AJRP",
+                       "folder": "The_Legend_of_Zelda_Majora_s_Mask_3D", "mixed": true,
+                       "status": "Untested", "note": "Versión europea: compilada en modo mixto con emulación Circle Pad Pro (stick derecho = C-stick, ZL/ZR propios)."}
 }

@@ -329,7 +329,8 @@ class Game:
     def mixed(self):
         """Trial (--mixed): a game whose only reason for safe mode is the video decoder gets the fast code everywhere else, and the safe
         way for the decoder's address range alone. The decoder is about 2% of such a game's code. Not the default until it has run on a
-        console: Mario Kart 7, the Laytons and Paper Jam build this way."""
+        console: Mario Kart 7, the Laytons and Paper Jam build this way. A game that has gets "mixed" in builder/compat.json, and the builder
+        builds it so (Ocarina of Time 3D: its safe-mode build fogged everything brown in Cemu)."""
         if self.mode == 'safe' and self.decoder_range and not coroutine_switches(self.dir):
             self.gen, self.mode, self.opt, self.safe_ranges = 'gen_mixed', 'abi', [], [self.decoder_range]
             self.gen_dir = f'{self.dir}/{self.gen}'
@@ -757,6 +758,7 @@ def prepare_logs(g, shadergen):
                 and os.path.basename(f) not in ('dvlb.bin', 'variants.bin', 'confirmed.bin')]
     own = {k for f in own_logs for k in fsv.keys(f)}
     near = []  # the logs of games whose states this one shares: an engine's
+    all_other = []
     for other in sorted(glob.glob(ROOT + '/games/*/')):
         other = other.rstrip('/\\').replace('\\', '/')
         name = os.path.basename(other)
@@ -771,9 +773,14 @@ def prepare_logs(g, shadergen):
             to = f'{logs}/other_{name}.bin' if os.path.basename(f) == 'fs_log.bin' else f'{logs}/other_{name}_{os.path.basename(f)}'
             shutil.copyfile(f, to)
             copied.append(to)
+        all_other += copied
         states = {k for f in theirs for k in fsv.keys(f)}
         if states and len(states & own) >= 0.05 * len(states):  # 7% and more within an engine, 3% and less across them (the nine, 2026-11)
             near += copied
+    # Untested games whose model format tev_to_log cannot read have no own fragment states yet: seed them with the common
+    # 3DS fragment states from other games (capped by FRAGMENT_VARIANTS) so the Wii U doesn't stall compiling hundreds live.
+    if not near and all_other:
+        near = all_other
     # combinations of the lit parts runs met, made from this game's states and its engine's: another engine's parts only multiply them
     r = run([sys.executable, ROOT + '/tools/fs_variants.py', logs + '/variants.bin', '--max', str(FRAGMENT_VARIANTS)] + own_logs + near,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors='replace')

@@ -239,6 +239,7 @@ void hid_motion(const s16 *accel, const s16 *gyro) {
 
 void hid_update(u32 buttons, s16 cx, s16 cy, bool touch, u16 tx, u16 ty) {
     live_input(buttons, cx, cy, touch, tx, ty);
+    hid_extra_pad_live(live.active ? live.cur.buttons : 0);
     Lock lk(kmutex);
     if (!hid.shm) return;
     u32 b = hid.shm->backing;

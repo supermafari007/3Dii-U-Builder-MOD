@@ -61,6 +61,10 @@ extern GxStats gx_stats;
 void hid_update(u32 buttons, s16 cx, s16 cy, bool touch, u16 tx, u16 ty);  // (host thread, lock not held)
 void hid_motion(const s16 *accel, const s16 *gyro);                        // (the thread that calls hid_update) x, y, z in the 3DS's units
 void ir_rst_update(bool zl, bool zr, s16 rx, s16 ry);                      // New 3DS C-Stick + ZL/ZR (host thread, lock not held)
+// ir (misc.cpp): the Circle Pad Pro a New 3DS answers with, from the host's second stick (-1..1, up positive) and ZL, ZR, R
+void hid_extra_pad(float x, float y, bool zl, bool zr, bool r);  // (host thread)
+void hid_extra_pad_live(u32 buttons);  // keep scripted extra-pad holds separate from physical refreshes
+bool extra_pad_connected();  // a game is reading it: ZL and ZR are its own then, not L and R as well
 // dsp
 void dsp_tick();  // (host thread, lock not held) one audio frame, played whether or not the game has come for the last one shortly
 void uds_tick();  // (called under kmutex from hid_update) poll LAN UDP packets & beacons

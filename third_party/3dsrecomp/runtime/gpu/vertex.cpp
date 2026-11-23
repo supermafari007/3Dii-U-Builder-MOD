@@ -266,6 +266,10 @@ void gs_reconfigure() {
 // (90 instructions for each of 1600 vertices a frame) took 28 ms of every frame (2026-11-13). The game's build can bring its programs as C
 // (tools/pica_to_c.py, from the programs its runs logged: its own code, so only in a build made from the user's logs), which this finds by
 // entry and a hash of the words each was made from, and runs instead; with none, the interpreter runs everything as before.
+// These optional C symbols must have external linkage. Declaring them
+// inside the anonymous namespace leaves GCC looking for namespace-mangled
+// weak symbols instead of the generated C table, silently disabling it.
+}  // namespace
 extern "C" {
 typedef void (*gs_emit_fn)(void *ctx, unsigned vid, unsigned prim, unsigned wind);
 typedef int (*gs_native_fn)(float (*r)[4], unsigned *bank, unsigned char *cond, const unsigned char *b, const unsigned char (*ui)[4], gs_emit_fn emit,
@@ -281,6 +285,8 @@ extern const gs_native gs_native_table[] __attribute__((weak));
 extern const unsigned gs_native_count __attribute__((weak));
 }
 static_assert(sizeof(V4) == 16 && sizeof(bool) == 1, "the generated code takes the register file as floats, and bools as bytes");
+
+namespace {
 
 static u64 gs_fnv(u64 h, u32 w) {
     for (int i = 0; i < 4; i++) h = (h ^ ((w >> (8 * i)) & 0xff)) * 0x100000001b3ull;

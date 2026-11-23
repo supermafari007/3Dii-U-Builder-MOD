@@ -12,6 +12,7 @@ struct DspState {
     std::shared_ptr<Event> other_irq[2];  // interrupt types 0/1
     bool game_waits = false;              // the game has been seen waiting on the pipe event
     u32 held = 0;                         // calls in a row that found the game still busy
+    u32 stale_waits = 0;                  // consecutive ticks with game waiting on pipe_irq[2] without a new frame_counter
     bool owed = false;                    // (dsp_tick's alone) a frame's interrupt hasn't gone to the game yet
 };
 DspState dsp;
@@ -59,8 +60,13 @@ void dsp_tick() {
         lk.unlock();
     }
     bool fresh = true;
-    if (!audio::tick(seen, &fresh, waiting)) return;
-    if (!fresh) return;  // never wake the game unless wr.source_status was actually published for this frame
+    const bool force_fresh = waiting && dsp.stale_waits >= 20;  // ~100 ms stall rescue (avoids both duplicate-wake loops and idle deadlocks)
+    if (!audio::tick(seen, &fresh, force_fresh)) return;
+    if (!fresh) {
+        if (waiting) dsp.stale_waits++;
+        return;
+    }
+    dsp.stale_waits = 0;
     if (lock_soon(lk)) dsp_interrupt();
     else dsp.owed = true;
 }

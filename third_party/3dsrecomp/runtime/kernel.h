@@ -211,6 +211,8 @@ void *guest_host_thread(u32 i);  // (Wii U, for hang reports) the OSThread behin
 bool guest_thread_regs(u32 i, u32 *status, u32 *pc, u32 *lr);  // (Wii U, lockless) guest thread state, pc and lr for slot i
 void dump_memory(const char *prefix);  // RECOMP_MEMDUMP
 bool guest_readable(u32 addr, u32 size);
+bool guest_readable_locked(u32 addr, u32 size);  // same check with the HLE kernel lock already held
+bool guest_writable(u32 addr, u32 size);  // entire range must be mapped writable, without overflow
 bool guest_busy();  // a guest thread is running (not all waiting)  // mapped and readable (host-side reads of game state)
 
 struct BootInfo {

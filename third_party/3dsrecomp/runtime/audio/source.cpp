@@ -72,7 +72,10 @@ void Source::parse_config(SourceConfig &cfg, const s16 coeffs[16]) {
 
     if (d & SRC_RESET) reset();
     if (d & SRC_PARTIAL_RESET) st.queue.clear();
-    if (d & SRC_ENABLE_DIRTY) st.enabled = cfg.enable != 0;
+    if (d & SRC_ENABLE_DIRTY) {
+        st.enabled = cfg.enable != 0;
+        if (!st.enabled) st.has_emitted = false;
+    }
     if (d & SRC_SYNC_COUNT_DIRTY) st.sync_count = cfg.sync_count;
     if (d & SRC_RATE_DIRTY) {
         st.rate = cfg.rate_multiplier;
@@ -243,15 +246,21 @@ void Source::generate(bool publish) {
     frame.fill({});
 
     if (!st.have_buffer) {
-        if (dequeue()) return;
-        if (!publish || st.update_unpublished) return;
-        // Nothing left to play: the source turns itself off.
-        if (g_verbose >= 3) rt_log("[dsp] src %p empty after id=%u: off\n", (void *)this, st.current_buffer_id);
-        st.enabled = false;
-        st.buffer_update = true;
-        st.last_buffer_id = st.current_buffer_id;
-        st.current_buffer_id = 0;
-        return;
+        if (dequeue()) {
+            // Keep first-start latency, but a stream that already played must
+            // consume its newly available buffer now instead of inserting 160 silent samples.
+            if (!st.has_emitted || !st.have_buffer) return;
+        } else {
+            if (!publish || st.update_unpublished) return;
+            // Nothing left to play: the source turns itself off.
+            if (g_verbose >= 3) rt_log("[dsp] src %p empty after id=%u: off\n", (void *)this, st.current_buffer_id);
+            st.enabled = false;
+            st.has_emitted = false;
+            st.buffer_update = true;
+            st.last_buffer_id = st.current_buffer_id;
+            st.current_buffer_id = 0;
+            return;
+        }
     }
 
 #ifdef __WIIU__  // no thread-local storage in an RPX; one audio thread
@@ -279,6 +288,7 @@ void Source::generate(bool publish) {
         if (st.pos >= st.cur_length) st.have_buffer = false;
     }
 
+    if (outi) st.has_emitted = true;
     st.filters.process(frame);
 }
 

@@ -616,11 +616,37 @@ bool guest_busy() {
     return running != nullptr;
 }
 
+static bool guest_permitted(u32 a, u32 size, u32 permission) {
+    const u64 end = (u64)a + size;
+    if (!size || end > 0x100000000ull || mem::lent(a, size)) return false;
+    const u64 program_end = (u64)g_game.data_addr + g_game.data_size + g_game.bss_size;
+    const u32 program_start = permission == 1 ? g_game.text_addr : g_game.data_addr;
+    u64 pos = a;
+    while (pos < end) {
+        if (pos >= program_start && pos < program_end) {
+            pos = std::min(end, program_end);
+        } else {
+            const Region *r = find_region((u32)pos);
+            if (!r || !(r->perm & permission)) return false;
+            pos = std::min(end, (u64)r->base + r->size);
+        }
+    }
+    return true;
+}
+
+bool guest_readable_locked(u32 a, u32 size) {
+    return guest_permitted(a, size, 1);
+}
+
 bool guest_readable(u32 a, u32 size) {
-    if (a >= g_game.text_addr && a + size <= g_game.data_addr + g_game.data_size + g_game.bss_size) return true;
+    if (size && a >= g_game.text_addr && (u64)a + size <= (u64)g_game.data_addr + g_game.data_size + g_game.bss_size &&
+        !mem::lent(a, size)) return true;
     Lock lk(kmutex);
-    const Region *r = find_region(a);
-    return r && (r->perm & 1) && a + size <= r->base + r->size;
+    return guest_readable_locked(a, size);
+}
+
+bool guest_writable(u32 a, u32 size) {
+    return guest_permitted(a, size, 2);
 }
 
 // linear heap allocator: first fit over free ranges

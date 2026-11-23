@@ -81,6 +81,30 @@ static const u32 ERR_FILE_EXISTS = fs_err(180, 1);
 static const u32 ERR_DIR_EXISTS = fs_err(185, 1);
 static const u32 ERR_ARCHIVE = fs_err(101, 4);
 static const u32 ERR_UNSUPPORTED = fs_err(760, 6, 28);
+static const u32 ERR_FS_IO = fs_err(0, 11, 27);  // FS/Internal/Permanent
+static const u32 ERR_FS_PERMISSION = fs_err(630, 8, 27);  // CommandNotAllowed
+
+static u32 delete_error(const std::error_code &ec) {
+    if (!ec || ec == std::errc::no_such_file_or_directory) return ERR_FILE_NOT_FOUND;
+    if (ec == std::errc::not_a_directory) return ERR_PATH_NOT_FOUND;
+    if (ec == std::errc::permission_denied || ec == std::errc::operation_not_permitted ||
+        ec == std::errc::read_only_file_system) return ERR_FS_PERMISSION;
+    if (ec == std::errc::directory_not_empty) return fs_err(240, 9);
+    if (ec == std::errc::is_a_directory) return fs_err(250, 9);
+    if (ec == std::errc::no_space_on_device) return fs_err(210, 3);
+    return ERR_FS_IO;
+}
+
+static u32 delete_host_file(const std::string &path, std::error_code &ec) {
+    // Aroma versions can turn remove(ENOENT) into MEDIA_ERROR/EIO. Check
+    // absence explicitly, so normal startup cleanup retains the missing-file
+    // result without hiding an actual I/O or permission failure.
+    const auto status = fsys::symlink_status(path, ec);
+    if (ec || status.type() == fsys::file_type::not_found) return delete_error(ec);
+    if (fsys::is_directory(status)) return fs_err(250, 9);  // DeleteFile must not remove directories
+    const bool removed = fsys::remove(path, ec);
+    return removed && !ec ? 0 : delete_error(ec);
+}
 
 }  // namespace kernel
 extern std::string g_save_base;
@@ -506,6 +530,7 @@ struct FileSession : Service {
             });
             const u64 spent_ns = (u64)std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - began).count();
             if (n < 0) n = 0;
+            if (n) gsp_cpu_wrote(dst, (u32)n);
             if (g_verbose >= 2) LOG("[fs] read %s off %llx len %x -> %lld\n", romfs ? "romfs" : path.c_str(), (unsigned long long)off, len, (long long)n);
             ipc.ok(2, 2);
             ipc.set(2, (u32)n);
@@ -919,9 +944,14 @@ struct FsUser : Service {
             Archive *a = arch(ipc[2], ipc[3]);
             if (!a) { ipc.result(ERR_ARCHIVE); break; }
             std::string path = a->host + sanitize(read_path(ipc[4], ipc[5], ipc[7]).str());
-            SAVE_SETTLE(path, true);
-            ipc.result(fsys::remove(path) ? 0 : ERR_FILE_NOT_FOUND);
-            save_changed(path);
+            SAVE_SETTLE(path, false);
+            std::error_code ec;
+            const u32 result = delete_host_file(path, ec);
+            if (ec && ec != std::errc::no_such_file_or_directory)
+                LOG("[fs] DeleteFile failed archive=%u path=%s error=%d (%s) result=%08x\n",
+                    a->id, path.c_str(), ec.value(), ec.message().c_str(), result);
+            ipc.result(result);
+            if (!result) { SAVE_SETTLE(path, true); save_changed(path); }
             break;
         }
         case 0x0805: {  // RenameFile(transaction, src archive, src type, src size, dst archive, dst type, dst size, ...)

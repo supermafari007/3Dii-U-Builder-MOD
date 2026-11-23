@@ -22,7 +22,7 @@ La documentación también se basa en [3dbrew](https://www.3dbrew.org/) y [WiiUB
 
 3Dii U es **100 % gratuito y de código abierto**, bajo la [Licencia Pública de la Unión Europea v1.2](LICENSE). Todas las versiones son gratuitas: no hay versiones de pago, niveles beta de pago ni funciones bloqueadas tras un pago. Puedes usarlo, estudiarlo, compartirlo y modificarlo conforme a la EUPL-1.2. Si distribuyes una versión modificada, debes ofrecer su código fuente bajo la misma licencia.
 
-**Versión de este fork: 1.0.0 MOD, solo para Windows.** [`builder/compat.json`](builder/compat.json) enumera los juegos que se han probado en una Wii U real. Cualquier otro juego se compila como «sin probar»: puede que no inicie o que se detenga a mitad de la ejecución. El paquete independiente y las futuras versiones se publican en [Releases](https://github.com/supermafari007/3Dii-U-Builder-MOD/releases).
+**Versión de este fork: 2.0.0 MOD, solo para Windows.** [`builder/compat.json`](builder/compat.json) enumera los juegos que se han probado en una Wii U real. Cualquier otro juego se compila como «sin probar»: puede que no inicie o que se detenga a mitad de la ejecución. El paquete independiente y las futuras versiones se publican en [Releases](https://github.com/supermafari007/3Dii-U-Builder-MOD/releases).
 
 ## Lo que debes aportar
 

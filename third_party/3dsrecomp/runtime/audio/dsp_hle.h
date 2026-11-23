@@ -78,6 +78,7 @@ private:
     };
     struct State {
         bool enabled = false;
+        bool has_emitted = false;
         u16 sync_count = 0;
         std::array<std::array<float, 4>, 3> gain{}, gain_ramp_start{};
         std::array<bool, 3> gain_ramp{};

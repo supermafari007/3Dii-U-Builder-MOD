@@ -16,6 +16,10 @@ static u32 cfg_region() {
     return pick_region(g_game.regions, cfg_language());
 }
 
+static u8 cfg_system_model() {
+    return 0;  // CTR (Old 3DS); Circle Pad Pro is emulated over ir:USER
+}
+
 // The game's language, the same all run, as a game may ask more than once (languages.h): the one picked in the options menu
 // (settings.ini), else the console's own
 int cfg_language() {
@@ -95,8 +99,8 @@ static void fill_block(u32 id, u32 dst, u32 size) {
     case 0x000D0000:  // EULA version agreed
         if (size >= 4) w32(dst, 0x00007F7F);
         break;
-    case 0x000F0004:  // system model: CTR
-        w8(dst, 0);
+    case 0x000F0004:  // system model: CTR (or New 3DS for Majora's Mask 3D)
+        w8(dst, cfg_system_model());
         break;
     case 0x00100001:
         break;
@@ -150,7 +154,7 @@ struct Cfg : Service {
             break;
         case 0x0005:  // GetSystemModel
             ipc.ok(2);
-            ipc.set(2, 0);
+            ipc.set(2, cfg_system_model());
             break;
         case 0x0006:  // GetModelNintendo2DS (1: not a 2DS)
             ipc.ok(2);

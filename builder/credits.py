@@ -2,7 +2,7 @@
 licence texts are THIRD_PARTY_LICENSES.md, which the app ships beside itself (make_app.py) and the repository keeps at
 its root; keep the two lists in step."""
 
-APP, VERSION = '3Dii-U Builder MOD', '1.0.0 MOD'
+APP, VERSION = '3Dii-U Builder MOD', '2.0.0 MOD'
 LICENCE = 'EUPL-1.2'
 SOURCE = 'https://github.com/supermafari007/3Dii-U-Builder-MOD'
 ORIGINAL = 'https://github.com/J-Glitch2502/3dii-u'
