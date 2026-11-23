@@ -39,6 +39,7 @@ TIMEOUT, MAX_LIST, PIECE = 8, 2 << 20, 1 << 20
 TOP = '3Dii U Builder'  # the zip's one top folder
 EXE = TOP + '.exe'
 TAG = re.compile(r'builder-([0-9]+(?:\.[0-9]+)*)(?:-[a-z]+)?-([0-9]{4})-([0-9]{2})-([0-9]{2})(?:\.([0-9]+))?')
+SEMVER_TAG = re.compile(r'v([0-9]+\.[0-9]+\.[0-9]+)(?:[-_]?mod)?', re.IGNORECASE)
 DIGEST = re.compile(r'sha256:([0-9a-f]{64})')
 ASSET = re.compile(r'3Dii[-. ]U[-. ]Builder.*\.zip', re.IGNORECASE)
 NAMED = re.compile(r'3Dii-U-Builder-(.+)\.zip')  # a zip named after its build's tag, as make_app.py names a release's
@@ -65,12 +66,17 @@ class Release:
 
 
 def tag_key(tag):
-    """builder-1.0-beta-2026-11-12(.2) as (version, date, same-day counter), which sort the way the releases came out; None for a tag that
+    """builder-1.0-beta-2026-11-12(.2) or v2.0.0 as (version, date, same-day counter), which sort the way the releases came out; None for a tag that
     isn't the app's (deps-1)"""
-    m = TAG.fullmatch(tag) if isinstance(tag, str) else None
-    if not m:
+    if not isinstance(tag, str):
         return None
-    return tuple(int(n) for n in m[1].split('.')), (int(m[2]), int(m[3]), int(m[4])), int(m[5] or 0)
+    m = TAG.fullmatch(tag)
+    if m:
+        return tuple(int(n) for n in m[1].split('.')), (int(m[2]), int(m[3]), int(m[4])), int(m[5] or 0)
+    m = SEMVER_TAG.fullmatch(tag)
+    if m:
+        return tuple(int(n) for n in m[1].split('.')), (0, 0, 0), 0
+    return None
 
 
 def build_tag(release_tag, asset):
@@ -97,7 +103,9 @@ def newest(releases, skip=()):
             tag = digest and ASSET.fullmatch(name) and build_tag(r.get('tag_name'), name)
             if (tag and tag not in skip and isinstance(url, str) and url.startswith(DOWNLOADS) and isinstance(size, int) and size > 0
                     and (not best or tag_key(tag) > tag_key(best.tag))):
-                title = '{}, {}-{:02}-{:02}'.format(r.get('name') or tag, *tag_key(tag)[1])
+                date = tag_key(tag)[1]
+                base_title = r.get('name') or tag
+                title = '{}, {}-{:02}-{:02}'.format(base_title, *date) if date != (0, 0, 0) else base_title
                 best = Release(tag, title, str(r.get('body') or ''), url, size, digest[1])
     return best
 

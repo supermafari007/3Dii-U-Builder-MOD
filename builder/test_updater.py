@@ -68,14 +68,15 @@ KEPT = [release('v1.0.1', name='3Dii-U-Builder-1.0.1-2026-11-20.zip'), release('
 r = up.newest(KEPT)
 assert r.tag == 'builder-1.0.1-2026-11-20' and r.url.endswith('/v1.0.1/3Dii-U-Builder-1.0.1-2026-11-20.zip') and r.title == 'Title v1.0.1, 2026-11-20', r
 assert up.newest(KEPT, skip={'builder-1.0.1-2026-11-20'}).tag == 'builder-1.0-beta-2026-11-12'
-assert up.newest([release('v1.0.1')]) is None, 'neither the zip nor the release names a build'
+assert up.newest([release('misc-release')]) is None, 'neither the zip nor the release names a build'
+assert up.newest([release('v2.1.0')]).tag == 'v2.1.0', 'MOD semver release tags (vX.Y.Z) are accepted'
 assert up.newest([release('builder-1.0-beta-2026-11-12', name='3Dii-U-Builder-1.0-beta-2026-11-13.zip')]).tag == 'builder-1.0-beta-2026-11-13'
 both = release('v1.0.1', name='3Dii-U-Builder-1.0.1-2026-11-20.zip')
 both['assets'].append(dict(both['assets'][1], name='3Dii-U-Builder-1.0.1-2026-11-27.zip'))
 assert up.newest([both]).tag == 'builder-1.0.1-2026-11-27', 'the newer of two zips in one release'
 both['assets'][2]['state'] = 'open'
 assert up.newest([both]).tag == 'builder-1.0.1-2026-11-20', 'a zip still being uploaded is not taken'
-assert up.build_tag('v1.0.1', '3Dii-U-Builder-../x.zip') is None and up.build_tag('deps-1', '3Dii U Builder.zip') is None
+assert up.build_tag('misc-1', '3Dii-U-Builder-../x.zip') is None and up.build_tag('deps-1', '3Dii U Builder.zip') is None
 print('newest ok')
 
 

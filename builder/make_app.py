@@ -237,14 +237,17 @@ def unconfirmed(compat, games):
 
 
 def release_tag(argv, version):
-    """the tag after --release, or '' without one; an exit if it isn't one of this version's"""
-    if '--release' not in argv:
-        return ''
+    """the tag after --release, or default v<semver> (e.g. v2.0.0) so built apps check for updates from this fork's repository"""
     import updater
+    if '--release' not in argv:
+        num = version.split()[0]
+        default = f'v{num}'
+        return default if updater.tag_key(default) else ''
     tag = (argv[argv.index('--release') + 1:] + [''])[0]
     version_tag = version.lower().replace(' ', '-')
-    if not updater.tag_key(tag) or not tag.startswith(f'builder-{version_tag}-'):
-        sys.exit(f'--release takes this build\'s tag, like builder-{version_tag}-2026-11-20')
+    num = version.split()[0]
+    if not updater.tag_key(tag) or not (tag.startswith(f'builder-{version_tag}-') or tag in (f'v{num}', f'v{num}-mod')):
+        sys.exit(f'--release takes this build\'s tag, like v{num} or builder-{version_tag}-2026-11-20')
     return tag
 
 
@@ -292,6 +295,10 @@ def main():
     if leaked:  # keys and console dumps are each user's own: an app carrying one must never ship
         sys.exit('The app holds files only a user may supply, so it was not packed:\n  ' + '\n  '.join(leaked))
     shutil.copyfile(os.path.join(app, 'engine', 'stamp.txt'), os.path.join(app, '_internal', 'stamp.txt'))  # app.py: one version, not two mixed
+    # Remove invalid Windows bfd-plugin libdep.a before counting files.txt and zipping
+    bad_libdep = os.path.join(app, 'engine', 'devkitpro', 'devkitPPC', 'lib', 'bfd-plugins', 'libdep.a')
+    if os.path.exists(bad_libdep):
+        os.remove(bad_libdep)
     if release:  # updater.py: the release this app is, which an older app checks before it takes it
         with open(os.path.join(app, '_internal', 'release.txt'), 'w') as f:
             f.write(release)
@@ -301,7 +308,8 @@ def main():
     for old in glob.glob(os.path.join(OUT, '*.zip')):  # one zip, this build's
         os.remove(old)
     # a release's zip is named after its tag, which is how the updater knows the build (updater.NAMED), with no spaces for GitHub to change
-    z = shutil.make_archive(os.path.join(OUT, release.replace('builder-', '3Dii-U-Builder-', 1) if release else f'{NAME} {gui.VERSION}'), 'zip', OUT, NAME)
+    zip_name = release.replace('builder-', '3Dii-U-Builder-', 1) if release.startswith('builder-') else f'{NAME} {gui.VERSION}'
+    z = shutil.make_archive(os.path.join(OUT, zip_name), 'zip', OUT, NAME)
     print(f'for testers: {z} ({os.path.getsize(z) >> 20} MB)')
 
 
