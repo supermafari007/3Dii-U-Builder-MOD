@@ -867,6 +867,7 @@ static void svc_locked(CPU *c, u32 imm, Lock &lk) {
         s64 ns = (s64)((u64)c->r[0] | ((u64)c->r[1] << 32));
         if (ns <= 0) yield_current(lk);
         else sleep_current((u64)ns, lk);
+        c->r[0] = RES_OK;
         break;
     }
     case 0x0B: {

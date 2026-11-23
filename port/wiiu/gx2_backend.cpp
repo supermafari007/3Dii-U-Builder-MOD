@@ -313,14 +313,16 @@ std::vector<u8> read_whole(const char *path, u32 align_to) {
     return d;
 }
 
-// shaders.gsh is read as each shader is needed, not kept whole: with every lit state compiled ahead, Luigi's Mansion: Dark Moon's is 51 MB, which
-// stayed in a heap that a long session filled up. At boot the file is read once to note where each shader's header and program blocks are; a shader
-// is then two reads into a small GFD of its own, which WHB copies out of (its program in memory of its own), and which goes again.
+// shaders.gsh is kept in memory when it fits (most games' are 1 to 6 MB), so a shader's first draw never waits for the drive. A huge
+// pack (Luigi's Mansion: Dark Moon's is 51 MB, with every lit state compiled ahead) is read as each shader is needed, not kept whole in a
+// heap that a long session fills up. At boot the file is read once to note where each shader's header and program blocks are; a shader is
+// then a small GFD of its own, which WHB copies out of (its program in memory of its own), and which goes again.
+constexpr size_t GFD_KEEP_LIMIT = 16u << 20;
 struct GfdShader {
     u32 head_at, head_len, prog_at, prog_len;  // each block with its block header
 };
 std::vector<GfdShader> gfd_vs, gfd_ps;
-std::vector<u8> gfd_file_head, gfd_end;  // the file's header and its end block
+std::vector<u8> gfd_file_head, gfd_end, gfd_resident;  // the file's header, its end block, and the whole file when it fits
 FILE *gfd_file;
 
 static void gfd_scan(const u8 *d, u32 n) {
@@ -345,13 +347,20 @@ static std::vector<u8> gfd_one(const GfdShader &g) {
     std::vector<u8> out(gfd_file_head);
     const size_t at = out.size();
     out.resize(at + g.head_len + g.prog_len);
-    wiiu::romfs_begin();  // the content's reads take turns (the game's RomFS is read the same way)
-    fseek(gfd_file, g.head_at, SEEK_SET);
-    const size_t a = fread(out.data() + at, 1, g.head_len, gfd_file);
-    fseek(gfd_file, g.prog_at, SEEK_SET);
-    const size_t b = fread(out.data() + at + g.head_len, 1, g.prog_len, gfd_file);
-    wiiu::romfs_end();
-    if (a != g.head_len || b != g.prog_len) FATAL("shaders.gsh could not be read\n");
+    if (!gfd_resident.empty()) {
+        if ((u64)g.head_at + g.head_len > gfd_resident.size() || (u64)g.prog_at + g.prog_len > gfd_resident.size())
+            FATAL("shaders.gsh could not be read\n");
+        memcpy(out.data() + at, gfd_resident.data() + g.head_at, g.head_len);
+        memcpy(out.data() + at + g.head_len, gfd_resident.data() + g.prog_at, g.prog_len);
+    } else {
+        wiiu::romfs_begin();  // the content's reads take turns (the game's RomFS is read the same way)
+        fseek(gfd_file, g.head_at, SEEK_SET);
+        const size_t a = fread(out.data() + at, 1, g.head_len, gfd_file);
+        fseek(gfd_file, g.prog_at, SEEK_SET);
+        const size_t b = fread(out.data() + at + g.head_len, 1, g.prog_len, gfd_file);
+        wiiu::romfs_end();
+        if (a != g.head_len || b != g.prog_len) FATAL("shaders.gsh could not be read\n");
+    }
     for (size_t blk : {at, at + g.head_len})
         for (int k = 0; k < 8; k++) out[blk + 24 + k] = 0;  // block id and index: 0
     out.insert(out.end(), gfd_end.begin(), gfd_end.end());
@@ -383,9 +392,12 @@ void load_shader_tables() {
         std::vector<u8> file = read_whole("fs:/vol/content/shaders.gsh", 0);
         if (file.empty()) FATAL("shaders.gsh is missing\n");
         gfd_scan(file.data(), (u32)file.size());
-    }  // and the memory goes back
-    gfd_file = fopen("fs:/vol/content/shaders.gsh", "rb");
-    if (!gfd_file) FATAL("shaders.gsh is missing\n");
+        if (file.size() <= GFD_KEEP_LIMIT) gfd_resident = std::move(file);
+    }  // and a larger pack's memory goes back
+    if (gfd_resident.empty()) {
+        gfd_file = fopen("fs:/vol/content/shaders.gsh", "rb");
+        if (!gfd_file) FATAL("shaders.gsh is missing\n");
+    }
     if (idx.size() < sizeof(ShaderIndexHeader)) FATAL("shaders.idx is missing\n");
     const auto *h = (const ShaderIndexHeader *)idx.data();
     if (h->magic != kShaderIndexMagic || h->version != kShaderIndexVersion) FATAL("shaders.idx is the wrong version\n");
@@ -1165,7 +1177,7 @@ constexpr u64 TEX_MEMORY_LIMIT = 128ull << 20;
 // Crossing's design canvas, Brain Age's handwriting. So small textures are hashed in turn, up to TURN_BYTES a flip (one up to TURN_LARGEST
 // when it's the flip's first), each at most every TURN_FLIPS; one found changed with no notice is hashed at its first use every flip, until
 // it stays the same for TURN_QUIET flips.
-constexpr u32 TURN_BYTES = 32 << 10, TURN_LARGEST = 64 << 10, TURN_FLIPS = 30, TURN_QUIET = 300;
+constexpr u32 TURN_BYTES = 256 << 10, TURN_LARGEST = 256 << 10, TURN_FLIPS = 2, TURN_QUIET = 300;
 u32 turn_budget = TURN_BYTES;
 
 constexpr u8 k_fmt_bits[16] = {32, 24, 16, 16, 16, 16, 16, 8, 8, 8, 4, 4, 4, 8, 8, 8};
@@ -1539,7 +1551,7 @@ GX2Texture *get_texture(u32 addr, u32 w, u32 h, u32 fmt, u32 levels, Surface **f
                 // The sample reads one word in 32 or fewer, so a few changed tiles can leave it as it was. Every byte gets checked too: all of
                 // them when such flushes are rare (after a file is read), and a run of them per flush when a game flushes every frame, which
                 // finds any change within SLICES flushes at a 32nd of a full hash's cost (4 ms a MB on a console).
-                if (heap_flush_gap > SLICES) {
+                if (heap_flush_gap > SLICES || e.bytes <= (128 << 10)) {
                     if (hash_guest(pptr(addr), e.bytes, std::array<u32, SLICES>().data()) != e.hash) e.maybe_dirty = true;
                 } else {
                     const u32 k = e.slice_next++ % SLICES;
@@ -2971,6 +2983,12 @@ static void guest_wrote(Surface &s, u32 paddr, u32 size) {
     s.written_lo = fresh ? paddr : std::min(s.written_lo, paddr);
     s.written_hi = fresh ? paddr + size : std::max(s.written_hi, paddr + size);
     s.guest_newer = true;
+    // The whole target written over: nothing of what the GPU drew there is still current, and the next draw into it starts from these bytes
+    // as its first draw did (upload_target).
+    if (s.written_lo <= s.addr && s.written_hi >= s.addr + s.bytes()) {
+        s.gpu_newer = false;
+        s.first_use = true;
+    }
 }
 
 // The game's last texture copies and display transfers through guest memory (gpu/transfer.cpp), numbered: a top screen the game puts together
@@ -3401,7 +3419,6 @@ void forget_unused() {
     for (auto it = surfaces.begin(); it != surfaces.end(); ++it) {
         Surface &s = **it;
         if (s.last_use + kForgetAfter > use_counter || &s == cur_color || &s == cur_depth || s.in_list || s.shared_depth) continue;
-        if (!s.depth && s.gpu_newer && !s.guest_newer) write_back(s);
         if (void *image = s.image()) {
             if (!s.mem1) free(image);
             else if (GfxHeapFreeMEM1) GfxHeapFreeMEM1(image);

@@ -305,13 +305,13 @@ struct Y2rService : Service {
             break;
         case 0x001F: coefficients(co); break;  // GetCoefficient
         case 0x0020:  // SetStandardCoefficient
-            standard = std::min<u32>(ipc[1], 3);
+            standard = std::min<u32>(ipc[1] & 0xff, 3);
             memcpy(co, kStandard[standard], sizeof co);
             ipc.ok();
             break;
         case 0x0021:  // GetStandardCoefficient: a query, not a change to the active table
-            if (ipc[1] >= 4) ipc.result(0xE0E053ED);  // CAM / InvalidEnumValue / InvalidArgument / Usage
-            else coefficients(kStandard[ipc[1]]);
+            if ((ipc[1] & 0xff) >= 4) ipc.result(0xE0E053ED);  // CAM / InvalidEnumValue / InvalidArgument / Usage
+            else coefficients(kStandard[ipc[1] & 0xff]);
             break;
         case 0x0022: alpha = ipc[1] & 0xffff; ipc.ok(); break;
         case 0x0023: get(alpha); break;
