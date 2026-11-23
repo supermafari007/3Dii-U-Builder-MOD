@@ -1,5 +1,7 @@
 # 3Dii-U Builder MOD
 
+> **Proyecto en pleno desarrollo:** Esta herramienta se encuentra en desarrollo activo y es propensa aún a fallos, errores gráficos, problemas de rendimiento o incompatibilidades según el juego.
+
 Fork modificado de **[3Dii U Builder](https://github.com/J-Glitch2502/3dii-u)** (Windows, versión **`2.0.0 MOD`**) que recompila volcados propios de Nintendo 3DS a código PowerPC, traduce los gráficos PICA200 a GX2 y empaqueta el resultado como un título WUP instalable en Wii U.
 
 - **Compatibilidad probada en Wii U real:** [`builder/compat.json`](builder/compat.json)
