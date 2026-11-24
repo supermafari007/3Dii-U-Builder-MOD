@@ -893,9 +893,8 @@ class Emitter:
         elif i.kind == CALL and i.target not in an.funcs:
             # a call to something discovery rejected (outside the code, or code reached only from data that
             # was decoded as instructions): go through the dispatcher, which reports it if it is ever reached
-            so, si = ('SOC', 'SIC') if self.cur_abi else ('SO', 'SI')
-            body.append('%s(); c->pc = 0x%xu; rt_dispatch(c, 0); %s(); if (__builtin_expect(c->pc != 0x%xu, 0)) return;' % (
-                so, i.target, si, i.link | th))
+            body.append('SO(); c->pc = 0x%xu; rt_dispatch(c, 0); SI(); if (__builtin_expect(c->pc != 0x%xu, 0)) return;' % (
+                i.target, i.link | th))
         elif i.kind == CALL and self.cur_abi and self.is_safe(i.target):
             # Into safe-mode code from fast code: it gets every register, and may come back through the dispatcher any number of times
             # (its pieces return to each other in ways the calling convention doesn't describe) before it returns here.
@@ -1059,6 +1058,7 @@ class Emitter:
                 rd, wr = rw(i)
                 if is_save(i):
                     saved |= rd
+                    st |= rd
                 else:
                     reads |= rd & ~st
                 st |= wr

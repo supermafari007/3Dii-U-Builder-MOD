@@ -312,7 +312,7 @@ void gsp_process_gx() {
             add_timeout(now_ns() + 1000000, [] { signal_irq(PPF); });
             irqs.clear();
         }
-        for (Irq i : irqs) signal_irq_now(i);
+        for (Irq i : irqs) signal_irq(i);
         {
             std::lock_guard<std::mutex> ql(gsp.qm);
             gsp.busy--;
