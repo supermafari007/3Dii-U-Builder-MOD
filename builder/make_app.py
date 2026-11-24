@@ -94,6 +94,8 @@ def bundle_logs(src, dst):
             made = list(shaderlogs.recipes(h.read()))
         shipped |= {fp for _, fp, *_ in made}
         recipes += len(made)
+    for f in [f for f in os.listdir(logs) if f.endswith('.vsf')]:  # pre-split vertex/geometry shader fingerprints
+        shutil.copy2(os.path.join(logs, f), os.path.join(out, f))
     srcs, cache, left = shaderlogs.sources(src), {}, 0  # a tested game's own code.bin and romfs.bin
     for f in os.listdir(logs):
         if not f.endswith('.bin') or f == 'dvlb.bin' or f.startswith('other_'):

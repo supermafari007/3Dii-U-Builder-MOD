@@ -409,7 +409,7 @@ def main():
     if a.cold:
         g.twin = derived(game)['slug']  # its own folder in games/ is no other game's: nothing of it is borrowed
     # Cold checks exclude learned data, while testing the same compiler policy as a normal build.
-    if a.mixed or (profile and profile.get('mixed') and not update and not code_mods):
+    if a.mixed or (profile and profile.get('mixed') and not code_mods):
         g.mixed()
     if g.mode == 'safe':
         print('hand-written code that keeps values in any register across its calls (Mobiclip\'s video decoder): every register goes through memory', flush=True)
