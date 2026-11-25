@@ -5,6 +5,7 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
+!/CHANGELOG.md
 !/ARCHITECTURE.md
 !/CONTRIBUTING.md
 !/LICENSE*

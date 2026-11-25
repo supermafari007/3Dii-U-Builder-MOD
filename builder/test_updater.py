@@ -133,9 +133,9 @@ with tempfile.TemporaryDirectory() as tmp:
     path = up.download(good, dl, progress=lambda d, t: late.append(d), cancelled=lambda: len(late) == 4, opener=serve(data))
     assert path and open(path, 'rb').read() == data and os.listdir(dl) == [good.tag + '.zip'], 'a cancel after the last piece keeps it'
     os.remove(path)
-    for bad, says in ((up.Release(**{**good.__dict__, 'sha256': '0' * 64}), 'doesn\'t match'),
-                      (up.Release(**{**good.__dict__, 'size': len(data) + 1}), 'doesn\'t match'),
-                      (up.Release(**{**good.__dict__, 'size': len(data) - 1}), 'bigger')):
+    for bad, says in ((up.Release(**{**good.__dict__, 'sha256': '0' * 64}), 'no coincide'),
+                      (up.Release(**{**good.__dict__, 'size': len(data) + 1}), 'no coincide'),
+                      (up.Release(**{**good.__dict__, 'size': len(data) - 1}), 'supera el tamaño')):
         raises(up.download, bad, dl, opener=serve(data), says=says)
         assert os.listdir(dl) == [], os.listdir(dl)
     pieces = []
@@ -149,11 +149,11 @@ with tempfile.TemporaryDirectory() as tmp:
                     raise ConnectionResetError('reset')
                 return super().read(n)
         return Cut(data)
-    raises(up.download, good, dl, opener=stops, says='stopped')
+    raises(up.download, good, dl, opener=stops, says='se detuvo')
     assert os.listdir(dl) == []
     asked.clear()
     for url in ('https://example.com/a.zip', 'https://github.com/J-Glitch2502/3dii-u.evil/releases/download/x/a.zip'):
-        raises(up.download, up.Release(**{**good.__dict__, 'url': url}), dl, opener=serve(data), says='doesn\'t come from')
+        raises(up.download, up.Release(**{**good.__dict__, 'url': url}), dl, opener=serve(data), says='no procede')
     raises(up.download, up.Release(**{**good.__dict__, 'tag': '../x'}), dl, opener=serve(data))
     assert asked == [] and os.listdir(dl) == []
     # a whole zip already there (its unpacking was cut short) is used as it is; one of the right size but another hash is fetched again
@@ -165,7 +165,7 @@ with tempfile.TemporaryDirectory() as tmp:
     assert up.download(good, dl, opener=serve(data)) == path and len(asked) == 1 and open(path, 'rb').read() == data
     os.remove(path)
     asked.clear()
-    raises(up.need_room, tmp, 1 << 60, 'the update', says='free space')
+    raises(up.need_room, tmp, 1 << 60, 'the update', says='espacio libre')
     print('download ok')
 
     # unpack
@@ -198,30 +198,30 @@ with tempfile.TemporaryDirectory() as tmp:
     new = tree(os.path.join(tmp, 'src_new'), stamp='2', notices=False)
     app = up.unpack(zipped(new, tag), out)
     assert app == os.path.join(out, tag, TOP) and open(os.path.join(app, up.EXE)).read() == 'new'
-    for also, says in ((['3Dii U Builder/../evil.txt'], 'outside'), (['/evil.txt'], 'outside'), (['C:/evil.txt'], 'outside'),
-                       (['3Dii U Builder\\..\\..\\evil.txt'], 'outside'), (['Other/evil.txt'], 'outside'), (['evil.txt'], 'outside')):
+    for also, says in ((['3Dii U Builder/../evil.txt'], 'fuera de la carpeta'), (['/evil.txt'], 'fuera de la carpeta'), (['C:/evil.txt'], 'fuera de la carpeta'),
+                       (['3Dii U Builder\\..\\..\\evil.txt'], 'fuera de la carpeta'), (['Other/evil.txt'], 'fuera de la carpeta'), (['evil.txt'], 'fuera de la carpeta')):
         raises(up.unpack, zipped(new, 'builder-1.0-beta-2026-11-15', also), out, says=says)
         assert not os.path.exists(os.path.join(out, 'builder-1.0-beta-2026-11-15')) and not os.path.exists(os.path.join(tmp, 'evil.txt'))
-    raises(up.unpack, zipped(tree(os.path.join(tmp, 'few'), extra=5), 'builder-1.0-beta-2026-11-16'), out, says='missing')
+    raises(up.unpack, zipped(tree(os.path.join(tmp, 'few'), extra=5), 'builder-1.0-beta-2026-11-16'), out, says='faltan')
     tree(os.path.join(tmp, 'mixed'))
     with open(os.path.join(tmp, 'mixed', 'engine', 'stamp.txt'), 'w') as f:
         f.write('other')
-    raises(up.unpack, zipped(os.path.join(tmp, 'mixed'), 'builder-1.0-beta-2026-11-17'), out, says='two versions')
+    raises(up.unpack, zipped(os.path.join(tmp, 'mixed'), 'builder-1.0-beta-2026-11-17'), out, says='dos versiones')
     with open(os.path.join(tmp, 'builder-1.0-beta-2026-11-18.zip'), 'wb') as f:
         f.write(b'not a zip')
-    raises(up.unpack, os.path.join(tmp, 'builder-1.0-beta-2026-11-18.zip'), out, says='couldn\'t be unpacked')
+    raises(up.unpack, os.path.join(tmp, 'builder-1.0-beta-2026-11-18.zip'), out, says='No se pudo descomprimir')
     raises(up.unpack, zipped(new, 'deps-1'), out)
-    raises(up.unpack, zipped(new, 'builder-1.0-beta-2026-11-20'), out, says='labelled as another version')
+    raises(up.unpack, zipped(new, 'builder-1.0-beta-2026-11-20'), out, says='identificada como otra versión')
     unlabelled = tree(os.path.join(tmp, 'unlabelled'), tag='builder-1.0-beta-2026-11-21')
     os.remove(os.path.join(unlabelled, '_internal', 'release.txt'))
     with open(os.path.join(unlabelled, '_internal', 'files.txt'), 'w') as f:
         f.write('1')
-    raises(up.unpack, zipped(unlabelled, 'builder-1.0-beta-2026-11-21'), out, says='labelled as another version')
+    raises(up.unpack, zipped(unlabelled, 'builder-1.0-beta-2026-11-21'), out, says='identificada como otra versión')
     assert sorted(os.listdir(out)) == [tag], os.listdir(out)
     # the same version again, while a window of it runs: refused, and the running one stays whole
     held = open(os.path.join(app, '_internal', 'lib.dll'))
     try:
-        raises(up.unpack, zipped(new, tag), out, says='in use')
+        raises(up.unpack, zipped(new, tag), out, says='en uso')
         assert sorted(os.listdir(out)) == [tag] and open(os.path.join(app, up.EXE)).read() == 'new', os.listdir(out)
     finally:
         held.close()
@@ -261,8 +261,8 @@ with tempfile.TemporaryDirectory() as tmp:
     r = record()
     assert r['format'] == 1 and r['tag'] == NEW and r['state'] == 'new' and os.path.join(home, r['exe']) == exe and abs(r['since'] - time.time()) < 60
     assert sorted(os.listdir(home)) == sorted(['launch.json', 'launch.lock', NEW]), 'the zip goes, and no temporary file stays'
-    raises(up.activate, app, says='isn\'t a downloaded update')
-    raises(up.activate, os.path.dirname(v), says='isn\'t a downloaded update')
+    raises(up.activate, app, says='no es una actualización descargada')
+    raises(up.activate, os.path.dirname(v), says='no es una actualización descargada')
     assert record() == r
     # activated: the version the record points at, while it may still be run
     assert up.activated() == NEW
@@ -359,7 +359,7 @@ with tempfile.TemporaryDirectory() as tmp:
         assert held
         t = time.monotonic()
         assert up.current(OLD) is None and not up.set_aside() and not up.confirm()
-        raises(up.activate, v, says='busy')
+        raises(up.activate, v, says='otra ventana')
         assert time.monotonic() - t < 4 * up.LOCK_WAIT + 2
     assert open(launch).read() == before
     assert up.current(OLD) == exe and record()['state'] == 'trying', 'and it works once the lock is free'
